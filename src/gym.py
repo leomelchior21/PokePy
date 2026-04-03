@@ -56,6 +56,12 @@ class GymBattle:
 
         self._setup_challenge()
 
+    def wants_text_input(self):
+        return self.phase == 'challenge' and self.code_editor.active and not self.code_editor.read_only
+
+    def get_text_input_rect(self):
+        return self.code_editor.get_text_input_rect()
+
     def _setup_challenge(self):
         self.current = self.challenges[self.challenge_index]
         self.code_editor.set_code('')  # start blank for gym challenges
@@ -78,8 +84,11 @@ class GymBattle:
         if self.phase == 'challenge':
             if event.type == pygame.KEYDOWN:
                 self.code_editor.handle_key(event)
+            elif event.type == pygame.TEXTINPUT:
+                self.code_editor.handle_text(event.text)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
+                self.code_editor.handle_mouse(pos, clicked=True)
                 suggestion = self.completion_bar.handle_mouse(pos, clicked=True)
                 if suggestion:
                     self.code_editor.insert_text(suggestion)
@@ -273,7 +282,7 @@ class GymBattle:
             surface.blit(overlay, (0, 0))
             text = self.font_large.render("Challenge Complete!", True, UI_HIGHLIGHT)
             surface.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 240))
-            cont = self.font.render("Press any key to continue", True, UI_TEXT)
+            cont = self.font.render("Tap or press any key to continue", True, UI_TEXT)
             surface.blit(cont, ((SCREEN_WIDTH - cont.get_width()) // 2, 290))
 
         if self.phase == 'fail':
@@ -282,7 +291,7 @@ class GymBattle:
             surface.blit(overlay, (0, 0))
             text = self.font_large.render("Gym Challenge Failed", True, UI_ERROR)
             surface.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 240))
-            cont = self.font.render("Press any key to leave", True, UI_TEXT)
+            cont = self.font.render("Tap or press any key to leave", True, UI_TEXT)
             surface.blit(cont, ((SCREEN_WIDTH - cont.get_width()) // 2, 290))
 
     def _draw_intro(self, surface):
@@ -316,7 +325,7 @@ class GymBattle:
                 (leader_sprite.get_width() * 3, leader_sprite.get_height() * 3))
             surface.blit(scaled, ((SCREEN_WIDTH - scaled.get_width()) // 2, 350))
 
-        prompt = self.font.render("Press any key to begin!", True, UI_TEXT)
+        prompt = self.font.render("Tap or press any key to begin!", True, UI_TEXT)
         surface.blit(prompt, ((SCREEN_WIDTH - prompt.get_width()) // 2, 540))
 
     def _draw_badge(self, surface):
@@ -348,5 +357,5 @@ class GymBattle:
         surface.blit(xp_text, ((SCREEN_WIDTH - xp_text.get_width()) // 2, 470))
 
         if t >= 1.0:
-            prompt = self.font.render("Press any key to continue", True, MID_GRAY)
+            prompt = self.font.render("Tap or press any key to continue", True, MID_GRAY)
             surface.blit(prompt, ((SCREEN_WIDTH - prompt.get_width()) // 2, 530))

@@ -136,6 +136,8 @@ class Battle:
         self.run_button = Button(SCREEN_WIDTH - 140, 520, 120, 36, "Run Code")
         self.hint_button = Button(SCREEN_WIDTH - 280, 520, 120, 36, "Hint")
         self.step_display = StepThroughDisplay(SCREEN_WIDTH - 250, 100, 230, 200)
+        self.capture_yes_button = Button(SCREEN_WIDTH // 2 - 110, 300, 90, 40, "Yes")
+        self.capture_no_button = Button(SCREEN_WIDTH // 2 + 20, 300, 90, 40, "No")
         self.code_runner = CodeRunner()
 
         # Step-through animation
@@ -165,6 +167,12 @@ class Battle:
         self.enemy_shake = 0
         self.player_shake = 0
 
+    def wants_text_input(self):
+        return self.phase == 'coding' and self.code_editor.active and not self.code_editor.read_only
+
+    def get_text_input_rect(self):
+        return self.code_editor.get_text_input_rect()
+
     def _pick_challenge(self):
         """Pick a challenge based on player XP (difficulty scaling)."""
         xp = self.player_data.get('xp', 0)
@@ -188,8 +196,11 @@ class Battle:
         if self.phase == 'coding':
             if event.type == pygame.KEYDOWN:
                 self.code_editor.handle_key(event)
+            elif event.type == pygame.TEXTINPUT:
+                self.code_editor.handle_text(event.text)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
+                self.code_editor.handle_mouse(pos, clicked=True)
                 # Check completion bar
                 suggestion = self.completion_bar.handle_mouse(pos, clicked=True)
                 if suggestion:
@@ -233,6 +244,19 @@ class Battle:
                     self.phase = 'done'
                     return {'action': 'battle_end', 'result': 'win',
                             'xp': self.xp_reward}
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if self.capture_yes_button.handle_mouse(event.pos, clicked=True):
+                    self.phase = 'capture_anim'
+                    self.capture_timer = 0
+                    hp_ratio = self.enemy_hp / max(self.enemy_max_hp, 1)
+                    self.capture_success = random.random() > hp_ratio * 0.4
+                elif self.capture_no_button.handle_mouse(event.pos, clicked=True):
+                    self.phase = 'done'
+                    return {'action': 'battle_end', 'result': 'win',
+                            'xp': self.xp_reward}
+            elif event.type == pygame.MOUSEMOTION:
+                self.capture_yes_button.handle_mouse(event.pos)
+                self.capture_no_button.handle_mouse(event.pos)
             return None
 
         if self.phase == 'capture_anim':
@@ -511,14 +535,16 @@ class Battle:
 
             surface.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 200))
             surface.blit(xp_text, ((SCREEN_WIDTH - xp_text.get_width()) // 2, 250))
-            prompt = self.font.render("Press any key to continue", True, MID_GRAY)
+            prompt = self.font.render("Tap or press any key to continue", True, MID_GRAY)
             surface.blit(prompt, ((SCREEN_WIDTH - prompt.get_width()) // 2, 350))
 
         elif self.phase == 'capture_prompt':
             text = self.font_large.render("Throw a PyBall?", True, SOLAR_YELLOW)
             surface.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 200))
-            z_text = self.font.render("[Z] Yes    [X] No", True, UI_TEXT)
+            z_text = self.font.render("Tap a choice or use Z / X", True, UI_TEXT)
             surface.blit(z_text, ((SCREEN_WIDTH - z_text.get_width()) // 2, 260))
+            self.capture_yes_button.draw(surface)
+            self.capture_no_button.draw(surface)
 
         elif self.phase == 'capture_anim':
             t = min(self.capture_timer / 60.0, 1.0)
@@ -538,5 +564,5 @@ class Battle:
                     xp_text = self.font.render(f"+{self.xp_reward} XP", True, UI_HIGHLIGHT)
                 surface.blit(text, ((SCREEN_WIDTH - text.get_width()) // 2, 200))
                 surface.blit(xp_text, ((SCREEN_WIDTH - xp_text.get_width()) // 2, 260))
-                prompt = self.font.render("Press any key to continue", True, MID_GRAY)
+                prompt = self.font.render("Tap or press any key to continue", True, MID_GRAY)
                 surface.blit(prompt, ((SCREEN_WIDTH - prompt.get_width()) // 2, 350))

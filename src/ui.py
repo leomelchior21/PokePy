@@ -101,7 +101,7 @@ class TextBox:
 
         # Continue indicator
         if self.finished_page:
-            indicator = ">>> Press Z to continue" if self.page_index < len(self.pages) - 1 else ">>> Press Z to close"
+            indicator = ">>> Tap / Z to continue" if self.page_index < len(self.pages) - 1 else ">>> Tap / Z to close"
             ind_surf = self.font.render(indicator, True, UI_HIGHLIGHT)
             surface.blit(ind_surf, (self.x + self.w - ind_surf.get_width() - 12, self.y + self.h - 22))
 
@@ -130,6 +130,20 @@ class Menu:
             return self.selected
         return None
 
+    def handle_mouse(self, pos, clicked=False):
+        for i in range(len(self.options)):
+            rect = self._option_rect(i)
+            if rect.collidepoint(pos):
+                self.selected = i
+                if clicked:
+                    return i
+                break
+        return None
+
+    def _option_rect(self, index):
+        y = self.y + self.padding + index * self.line_height
+        return pygame.Rect(self.x + 4, y - 2, self.w - 8, self.line_height)
+
     def draw(self, surface):
         box = pygame.Rect(self.x, self.y, self.w, self.h)
         pygame.draw.rect(surface, UI_PANEL, box, border_radius=6)
@@ -139,7 +153,7 @@ class Menu:
             color = UI_HIGHLIGHT if i == self.selected else UI_TEXT
             y = self.y + self.padding + i * self.line_height
             if i == self.selected:
-                sel_rect = pygame.Rect(self.x + 4, y - 2, self.w - 8, self.line_height)
+                sel_rect = self._option_rect(i)
                 pygame.draw.rect(surface, (50, 60, 80), sel_rect, border_radius=4)
                 arrow = self.font.render(">", True, UI_HIGHLIGHT)
                 surface.blit(arrow, (self.x + 8, y))
@@ -219,18 +233,44 @@ class CodeEditor:
         self.cursor_blink = 0
         self.scroll_offset = 0
         self.line_height = FONT_SIZE_CODE + 4
-        self.max_visible = (h - 20) // self.line_height
+        self.toolbar_height = 28
+        self.max_visible = max(1, (h - 20 - self.toolbar_height) // self.line_height)
         self.active = True
         self.highlight_line = -1  # for step-through
         self.read_only = False
+        self.toolbar_specs = [
+            ("Tab", "tab"),
+            ("Bksp", "backspace"),
+            ("Enter", "enter"),
+            ("Left", "left"),
+            ("Right", "right"),
+            ("Up", "up"),
+            ("Down", "down"),
+        ]
+        self.toolbar_rects = []
+        self._layout_toolbar()
+
+    def _layout_toolbar(self):
+        self.toolbar_rects = []
+        x = self.x + 8
+        y = self.y + 6
+        for label, command in self.toolbar_specs:
+            width = max(48, self.font.size(label)[0] + 18)
+            rect = pygame.Rect(x, y, width, self.toolbar_height - 8)
+            self.toolbar_rects.append((command, rect, label))
+            x += width + 6
 
     def set_code(self, code):
         self.lines = code.split('\n') if code else ['']
         self.cursor_row = len(self.lines) - 1
         self.cursor_col = len(self.lines[-1])
+        self.scroll_offset = max(0, self.cursor_row - self.max_visible + 1)
 
     def get_code(self):
         return '\n'.join(self.lines)
+
+    def get_text_input_rect(self):
+        return pygame.Rect(self.x + 40, self.y + self.toolbar_height + 8, self.w - 48, self.h - self.toolbar_height - 16)
 
     def insert_text(self, text):
         """Insert text at cursor, handling newlines."""
@@ -249,6 +289,11 @@ class CodeEditor:
                 self.lines[self.cursor_row] = line[:self.cursor_col] + ch + line[self.cursor_col:]
                 self.cursor_col += 1
         self._ensure_visible()
+
+    def handle_text(self, text):
+        if self.read_only or not text:
+            return
+        self.insert_text(text.replace('\r', ''))
 
     def handle_key(self, event):
         if self.read_only:
@@ -305,15 +350,67 @@ class CodeEditor:
             self.cursor_col = len(self.lines[self.cursor_row])
         elif event.key == pygame.K_TAB:
             self.insert_text('    ')
-        elif event.unicode and event.unicode.isprintable():
-            self.insert_text(event.unicode)
         self._ensure_visible()
+
+    def apply_command(self, command):
+        key_map = {
+            'tab': pygame.K_TAB,
+            'backspace': pygame.K_BACKSPACE,
+            'enter': pygame.K_RETURN,
+            'left': pygame.K_LEFT,
+            'right': pygame.K_RIGHT,
+            'up': pygame.K_UP,
+            'down': pygame.K_DOWN,
+        }
+        key = key_map.get(command)
+        if key is None:
+            return False
+        fake_event = pygame.event.Event(pygame.KEYDOWN, {'key': key, 'unicode': ''})
+        self.handle_key(fake_event)
+        return True
 
     def _ensure_visible(self):
         if self.cursor_row < self.scroll_offset:
             self.scroll_offset = self.cursor_row
         elif self.cursor_row >= self.scroll_offset + self.max_visible:
             self.scroll_offset = self.cursor_row - self.max_visible + 1
+
+    def handle_mouse(self, pos, clicked=False):
+        if not clicked:
+            return False
+
+        for command, rect, _label in self.toolbar_rects:
+            if rect.collidepoint(pos):
+                self.active = True
+                return self.apply_command(command)
+
+        editor_rect = self.get_text_input_rect()
+        if not editor_rect.collidepoint(pos):
+            self.active = False
+            return False
+
+        self.active = True
+        gutter_w = 35
+        text_x = self.x + gutter_w + 4
+        text_y = self.y + self.toolbar_height + 8
+        local_y = pos[1] - text_y
+        row = self.scroll_offset + max(0, min(self.max_visible - 1, local_y // self.line_height))
+        row = max(0, min(row, len(self.lines) - 1))
+
+        line = self.lines[row]
+        rel_x = max(0, pos[0] - text_x)
+        col = 0
+        for i in range(len(line) + 1):
+            width = self.font.size(line[:i])[0]
+            if width >= rel_x:
+                col = i
+                break
+            col = i
+
+        self.cursor_row = row
+        self.cursor_col = col
+        self._ensure_visible()
+        return True
 
     def _syntax_color(self, text):
         """Simple syntax coloring - returns list of (text, color) segments."""
@@ -368,18 +465,27 @@ class CodeEditor:
         pygame.draw.rect(surface, UI_CODE_BG, bg_rect, border_radius=6)
         pygame.draw.rect(surface, UI_BORDER, bg_rect, 2, border_radius=6)
 
+        for _command, rect, label in self.toolbar_rects:
+            pygame.draw.rect(surface, UI_PANEL, rect, border_radius=4)
+            pygame.draw.rect(surface, UI_BORDER, rect, 1, border_radius=4)
+            txt = self.font.render(label, True, UI_TEXT)
+            tx = rect.x + (rect.w - txt.get_width()) // 2
+            ty = rect.y + (rect.h - txt.get_height()) // 2
+            surface.blit(txt, (tx, ty))
+
         # Clip to editor area
-        clip = pygame.Rect(self.x + 2, self.y + 2, self.w - 4, self.h - 4)
+        clip = pygame.Rect(self.x + 2, self.y + self.toolbar_height + 2, self.w - 4, self.h - self.toolbar_height - 4)
         surface.set_clip(clip)
 
         gutter_w = 35
         text_x = self.x + gutter_w + 4
+        text_y = self.y + self.toolbar_height + 8
 
         for i in range(min(self.max_visible, len(self.lines) - self.scroll_offset)):
             line_idx = i + self.scroll_offset
             if line_idx >= len(self.lines):
                 break
-            y = self.y + 8 + i * self.line_height
+            y = text_y + i * self.line_height
 
             # Highlight current step-through line
             if line_idx == self.highlight_line:
@@ -391,7 +497,7 @@ class CodeEditor:
             surface.blit(ln_text, (self.x + 6, y))
 
             # Gutter separator
-            pygame.draw.line(surface, UI_BORDER, (self.x + gutter_w, self.y + 4),
+            pygame.draw.line(surface, UI_BORDER, (self.x + gutter_w, self.y + self.toolbar_height + 4),
                            (self.x + gutter_w, self.y + self.h - 4), 1)
 
             # Syntax-colored text
@@ -514,9 +620,23 @@ class InputField:
             self.text = self.text[:-1]
         elif event.key == pygame.K_RETURN:
             return self.text if self.text.strip() else None
-        elif event.unicode and event.unicode.isprintable() and len(self.text) < self.max_len:
-            self.text += event.unicode
         return None
+
+    def handle_text(self, text):
+        if not self.active or not text:
+            return
+        for ch in text:
+            if ch.isprintable() and len(self.text) < self.max_len:
+                self.text += ch
+
+    def handle_mouse(self, pos, clicked=False):
+        if not clicked:
+            return False
+        self.active = self.rect.collidepoint(pos)
+        return self.active
+
+    def get_text_input_rect(self):
+        return self.rect
 
     def draw(self, surface):
         pygame.draw.rect(surface, UI_CODE_BG, self.rect, border_radius=6)

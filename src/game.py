@@ -1,5 +1,7 @@
 """PokePy: Aurora Archipelago - Main Game (State Machine, Screens, Loop)"""
 
+import asyncio
+import sys
 import pygame
 import random
 import math
@@ -11,6 +13,7 @@ from src.ui import TextBox, Menu, HUD, InputField, get_font
 from src.world import World
 from src.battle import Battle
 from src.gym import GymBattle
+from src.touch import CombinedInput, TouchControls
 
 
 class PlayerData:
@@ -105,10 +108,16 @@ class Game:
 
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        flags = pygame.RESIZABLE
+        if hasattr(pygame, 'SCALED'):
+            flags |= pygame.SCALED
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), flags)
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
         self.running = True
+        self.text_input_enabled = False
+        self.touch_controls = TouchControls()
+        self._configure_browser_canvas()
 
         # Sprites
         self.sprites = SpriteCache()
@@ -151,13 +160,36 @@ class Game:
         self.transition_target = None
         self.transition_callback = None
 
-    def run(self):
+    def _configure_browser_canvas(self):
+        if sys.platform != 'emscripten':
+            return
+        try:
+            from platform import window
+
+            canvas = window.canvas
+            canvas.style.width = "100vw"
+            canvas.style.height = "100vh"
+            canvas.style.maxWidth = "100vw"
+            canvas.style.maxHeight = "100vh"
+            canvas.style.objectFit = "contain"
+            canvas.style.imageRendering = "pixelated"
+            canvas.style.touchAction = "none"
+            window.document.body.style.margin = "0"
+            window.document.body.style.background = "#141923"
+            window.document.body.style.overflow = "hidden"
+        except Exception:
+            pass
+
+    async def run(self):
         while self.running:
-            dt = self.clock.tick(FPS)
+            self.clock.tick(FPS)
             self._handle_events()
             self._update()
             self._draw()
             pygame.display.flip()
+            await asyncio.sleep(0)
+        if self.text_input_enabled:
+            pygame.key.stop_text_input()
         pygame.quit()
 
     def _handle_events(self):
@@ -170,9 +202,12 @@ class Game:
             if self.transitioning:
                 continue
 
+            if self.touch_controls.handle_event(event):
+                continue
+
             # Textbox takes priority when active
             if self.textbox.active:
-                if event.type == pygame.KEYDOWN and event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE):
+                if (event.type == pygame.KEYDOWN and event.key in (pygame.K_z, pygame.K_RETURN, pygame.K_SPACE)) or event.type == pygame.MOUSEBUTTONDOWN:
                     still_active = self.textbox.advance()
                     if not still_active and self.dialogue_callback:
                         cb = self.dialogue_callback
@@ -181,10 +216,17 @@ class Game:
                 continue
 
             # Menu takes priority when active
-            if self.menu and event.type == pygame.KEYDOWN:
-                result = self.menu.handle_input(event.key)
-                if result is not None:
-                    self._handle_menu_select(result)
+            if self.menu:
+                if event.type == pygame.KEYDOWN:
+                    result = self.menu.handle_input(event.key)
+                    if result is not None:
+                        self._handle_menu_select(result)
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    result = self.menu.handle_mouse(event.pos, clicked=True)
+                    if result is not None:
+                        self._handle_menu_select(result)
+                elif event.type == pygame.MOUSEMOTION:
+                    self.menu.handle_mouse(event.pos)
                 continue
 
             # State-specific event handling
@@ -202,6 +244,12 @@ class Game:
                 self._handle_evolution_event(event)
 
     def _update(self):
+        self.touch_controls.set_enabled(
+            self.state == STATE_OVERWORLD and self.world is not None and
+            not self.textbox.active and not self.menu and not self.transitioning
+        )
+        self._sync_text_input()
+
         # Transition
         if self.transitioning:
             self.transition_alpha += 8
@@ -256,6 +304,8 @@ class Game:
         # Menu overlay
         if self.menu:
             self.menu.draw(self.screen)
+
+        self.touch_controls.draw(self.screen)
 
         # Transition overlay
         if self.transition_alpha > 0:
@@ -324,7 +374,11 @@ class Game:
     def _handle_setup_event(self, event):
         if self.setup_phase == 0:
             # Name input
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.name_input.handle_mouse(event.pos, clicked=True)
+            elif event.type == pygame.TEXTINPUT:
+                self.name_input.handle_text(event.text)
+            elif event.type == pygame.KEYDOWN:
                 result = self.name_input.handle_key(event)
                 if result:
                     self.player_data.name = result
@@ -521,7 +575,7 @@ class Game:
     def _update_overworld(self):
         if not self.world:
             return
-        keys = pygame.key.get_pressed()
+        keys = CombinedInput(pygame.key.get_pressed(), self.touch_controls.get_pressed_keys())
         tile_stepped = self.world.handle_movement(keys)
 
         if tile_stepped == TILE_TALL_GRASS:
@@ -553,7 +607,7 @@ class Game:
         if self.world:
             # Handle movement in draw since we need continuous key checks
             if not self.textbox.active and not self.menu and not self.transitioning:
-                keys = pygame.key.get_pressed()
+                keys = CombinedInput(pygame.key.get_pressed(), self.touch_controls.get_pressed_keys())
                 tile_stepped = self.world.handle_movement(keys)
                 if tile_stepped == TILE_TALL_GRASS:
                     if self.world.check_grass_encounter():
@@ -715,3 +769,27 @@ class Game:
             if callback:
                 callback()
         self.transition_callback = on_black
+
+    def _sync_text_input(self):
+        rect = None
+
+        if self.transitioning or self.textbox.active or self.menu:
+            rect = None
+        elif self.state == STATE_SETUP and self.setup_phase == 0 and self.name_input and self.name_input.active:
+            rect = self.name_input.get_text_input_rect()
+        elif self.state == STATE_BATTLE and self.battle and self.battle.wants_text_input():
+            rect = self.battle.get_text_input_rect()
+        elif self.state == STATE_GYM and self.gym_battle and self.gym_battle.wants_text_input():
+            rect = self.gym_battle.get_text_input_rect()
+
+        wants_text_input = rect is not None
+
+        if wants_text_input and not self.text_input_enabled:
+            pygame.key.start_text_input()
+            self.text_input_enabled = True
+        elif not wants_text_input and self.text_input_enabled:
+            pygame.key.stop_text_input()
+            self.text_input_enabled = False
+
+        if wants_text_input:
+            pygame.key.set_text_input_rect(rect)
