@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { PythonCode } from '../components/PythonCode'
 import { audio } from '../engine/audio'
 import { buildWorks, joinTokens, orderWorks, produces, withLine, type Challenge } from './challenges'
+import { devState } from '../game/chapters'
 
 export interface ChallengeResult { correct: boolean; aided: 'none' | 'lens' | 'duck' }
 
@@ -122,7 +123,8 @@ export function ChallengeView({ challenge, title, lenses, ducks, onUseItem, onDo
     <button className="btn btn--small" disabled={ducks <= 0} onClick={askDuck}>🦆 Debug Duck ({ducks})</button>
   </div>
 
-  const header = <header className="cv-head"><span className="cv-kind">{kindLabel[challenge.kind]}</span><b>{title}</b><p>{challenge.prompt}</p></header>
+  const header = <header className="cv-head"><span className="cv-kind">{kindLabel[challenge.kind]}</span><b>{title}</b><p>{challenge.prompt}</p>
+    {devState.reveal && <pre className="cv-reveal">TEACHER · ANSWER: {answerText()}</pre>}</header>
 
   if (challenge.kind === 'predict' || challenge.kind === 'trace' || challenge.kind === 'fill') {
     return <div className="cv">

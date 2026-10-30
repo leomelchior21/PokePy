@@ -93,7 +93,7 @@ export function pyxieCanvas(species: string, shiny = false) {
   const grid = gridFrom(design.rows, true)
   for (const [x, y, c] of design.overrides ?? []) grid[y][x] = c
   const palette = { ...base, ...design.palette }
-  return renderGrid(`pyx:${species}:${shiny}`, outline(grid), shiny ? shinyPalette(palette) : palette)
+  return renderGrid(`pyx:${species}:${shiny}`, outline(grid), shiny ? shinyPalette(palette) : palette, true)
 }
 
 export function pyxieUrl(species: string, shiny = false): string {
@@ -186,7 +186,7 @@ export function personCanvas(look: Look, dir: Direction, frame: number) {
     Y: '#6b4a2a', g: '#2b2230', q: '#bfe8ff', k: '#3a3a48',
   }
   const key = `p:${JSON.stringify(look)}:${dir}:${frame}`
-  return renderGrid(key, outline(grid), palette)
+  return renderGrid(key, outline(grid), palette, true)
 }
 
 export function personUrl(look: Look, dir: Direction = 'down', frame = 0): string {

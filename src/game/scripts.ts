@@ -101,7 +101,8 @@ export const scripts: Record<string, Script> = {
 
   pod: async (ctx) => {
     const species = getSpecies(ctx.arg ?? 'sparkit')
-    if (!hasFlag(ctx.get(), 'lab_intro')) return
+    // Leo Maker always introduces the pods first, however you got to the workbench.
+    if (!hasFlag(ctx.get(), 'lab_intro')) await scripts['lab-intro'](ctx)
     await ctx.ui.say([`It's ${species.name}, the ${species.concept.toUpperCase()} pyxie.`, species.entry])
     const pick = await ctx.ui.choose(`Choose ${species.name}?`, ['Yes!', 'Not yet'])
     if (pick !== 0) return

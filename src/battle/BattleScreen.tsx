@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { concepts, effectivenessText } from '../data/concepts'
+import { concepts } from '../data/concepts'
 import { duels, shieldsFor } from '../data/duels'
 import { items } from '../data/items'
 import { getMove } from '../data/moves'
@@ -10,6 +10,7 @@ import { randomRng } from '../lib/rng'
 import type { OwnedPyxie, SaveState } from '../types'
 import { Bar, ConceptTag, PyxieImg } from '../ui/Sprite'
 import { createChallenge, createDodge, type Challenge } from './challenges'
+import { BattleBackdrop } from './BattleBackdrop'
 import { ChallengeView, type ChallengeResult } from './ChallengeView'
 import { DuelPanel, runDuel, type DuelRun } from './CodeDuel'
 import { catchChance, displayName, enemyDamage, gainXp, isFainted, moveDamage, pickEnemyMove, statsFor, trainerXpReward, xpReward } from './engine'
@@ -28,6 +29,10 @@ type View =
   | { kind: 'evolve'; from: string; to: string; stage: number }
 
 interface Popup { id: number; side: 'enemy' | 'player'; text: string; tone: 'dmg' | 'good' | 'info' }
+
+type BannerTone = 'start' | 'super' | 'combo' | 'perfect' | 'bug' | 'dodge' | 'ko' | 'level' | 'catch' | 'victory' | 'defeat' | 'firewall' | 'weak'
+interface Banner { id: number; text: string; sub?: string; tone: BannerTone }
+interface Fx { id: number; kind: 'spark' | 'confetti' | 'shot'; side: 'enemy' | 'player'; color: string; glyph: string; angle: number; dist: number; delay: number }
 
 interface Props {
   spec: BattleSpec
@@ -52,6 +57,9 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
   const [popups, setPopups] = useState<Popup[]>([])
   const [shields, setShields] = useState<{ total: number; broken: number } | null>(null)
   const [intro, setIntro] = useState(true)
+  const [banner, setBanner] = useState<Banner | null>(null)
+  const [fx, setFx] = useState<Fx[]>([])
+  const [mood, setMood] = useState<'' | 'victory' | 'defeat'>('')
   const rerender = () => setTick((value) => value + 1)
   const duelBattle = spec.kind === 'trainer' && Boolean(spec.trainer.duels?.length)
 
@@ -69,6 +77,29 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
     resolver.current = () => resolve()
     setView({ kind: 'message', text })
   }), [])
+
+  /** A big slammed-in word over the stage: SUPER EFFECTIVE!, VICTORY!, BUG! */
+  const shout = (text: string, tone: BannerTone, sub?: string, ms = 1100) => {
+    const id = Date.now() + Math.random()
+    setBanner({ id, text, sub, tone })
+    window.setTimeout(() => setBanner((current) => current?.id === id ? null : current), ms)
+    return wait(Math.min(ms, 650))
+  }
+  /** Particles bursting from a pyxie, colored by concept. */
+  const burst = (side: Fx['side'], concept: string, count = 12, kind: Fx['kind'] = 'spark') => {
+    const info = concepts[concept as keyof typeof concepts] ?? concepts.print
+    const batch: Fx[] = Array.from({ length: count }, (_, i) => ({ id: Date.now() + Math.random() + i, kind, side, color: kind === 'confetti' ? ['#ffd23f', '#a57bff', '#5fd17a', '#ff6fae', '#4fa3ff'][i % 5] : info.color, glyph: info.glyph, angle: (360 / count) * i + Math.random() * 20, dist: 60 + Math.random() * 70, delay: kind === 'confetti' ? Math.random() * 400 : 0 }))
+    setFx((list) => [...list, ...batch])
+    window.setTimeout(() => setFx((list) => list.filter((item) => !batch.includes(item))), kind === 'confetti' ? 2200 : 900)
+  }
+  /** A glyph flying from the attacker to the target. */
+  const shoot = async (from: Fx['side'], concept: string) => {
+    const info = concepts[concept as keyof typeof concepts] ?? concepts.print
+    const id = Date.now() + Math.random()
+    setFx((list) => [...list, { id, kind: 'shot', side: from, color: info.color, glyph: info.glyph, angle: 0, dist: 0, delay: 0 }])
+    await wait(380)
+    setFx((list) => list.filter((item) => item.id !== id))
+  }
 
   const pop = (side: Popup['side'], text: string, tone: Popup['tone']) => {
     const id = Date.now() + Math.random()
@@ -100,7 +131,7 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
       rerender()
       if (member.uid === activeUid.current) await say(`${displayName(member)} gained ${share} XP! Trainer XP +${txp}.`)
       for (const event of events) {
-        if (event.type === 'level') { audio.sfx('level'); await say(`${displayName(member)} grew to level ${event.level}!`) }
+        if (event.type === 'level') { audio.sfx('level'); if (member.uid === activeUid.current) burst('player', getSpecies(member.species).concept, 14, 'confetti'); await shout('LEVEL UP!', 'level', `${displayName(member)} → Lv ${event.level}`, 1300); await say(`${displayName(member)} grew to level ${event.level}!`) }
         if (event.type === 'forgot') await say(`${displayName(member)} forgot ${getMove(event.forgot!).name} to make room…`)
         if (event.type === 'move') { audio.sfx('item'); await say(`${displayName(member)} learned ${getMove(event.move!).name}!`) }
         if (event.type === 'evolve') {
@@ -117,6 +148,8 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
 
   const enemyFainted = async (): Promise<boolean> => {
     audio.sfx('faint')
+    burst('enemy', getSpecies(enemy().species).concept, 16)
+    void shout('K.O.!', 'ko', undefined, 1000)
     await flashAnim('enemy', 'faint', 700)
     setAnim((current) => ({ ...current, enemy: 'gone' }))
     await say(`${spec.kind === 'wild' ? 'The wild ' : ''}${displayName(enemy())} fainted!`)
@@ -167,12 +200,13 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
     await say(`${spec.kind === 'wild' ? 'Wild ' : 'Foe '}${displayName(foe)} used ${move.name}!`)
     const dodge = createDodge(getSpecies(foe.species).concept, rng)
     const result = await ask<ChallengeResult>({ kind: 'challenge', challenge: dodge, title: 'DODGE!', quick: true, id: 0 })
-    await flashAnim('enemy', 'attack', 300)
+    void flashAnim('enemy', 'attack', 300)
+    await shoot('enemy', move.concept)
     const hit = enemyDamage(foe, active(), moveId, result.correct, rng)
+    burst('player', move.concept, result.correct ? 6 : 12)
     await hitPlayer(hit.damage, hit.multiplier)
-    const note = effectivenessText(hit.multiplier)
-    if (result.correct) await say('Nice dodge! Only a scratch.')
-    else if (note) await say(note)
+    if (result.correct) await shout('DODGED!', 'dodge', 'Only a scratch', 900)
+    else if (hit.multiplier > 1) await shout('SUPER EFFECTIVE!', 'super', 'Ouch!')
     if (isFainted(active())) return (await playerFainted()) ? 'ok' : 'lost'
     return 'ok'
   }
@@ -186,25 +220,29 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
     if (result.correct) {
       streak.current += 1
       stat((s) => ({ streak: streak.current, bestStreak: Math.max(s.bestStreak, streak.current) }))
+      await shout(streak.current >= 3 ? `COMBO ×${streak.current}!` : result.aided === 'duck' ? 'QUACK!' : ['PERFECT!', 'NICE CODE!', 'GREAT!', 'BRILLIANT!'][Math.floor(Math.random() * 4)], streak.current >= 3 ? 'combo' : 'perfect', undefined, 800)
       await say(`${displayName(me)} used ${move.name}!`)
-      await flashAnim('player', 'attack', 300)
+      void flashAnim('player', 'attack', 300)
+      await shoot('player', move.concept)
       const hit = moveDamage(me, enemy(), moveId, streak.current, rng)
       const foe = enemy()
       enemies.current[enemyIndex.current] = { ...foe, hp: Math.max(0, foe.hp - hit.damage) }
       audio.sfx(hit.multiplier > 1 ? 'super' : 'hit')
+      burst('enemy', move.concept, hit.multiplier > 1 ? 18 : 12)
       pop('enemy', `-${hit.damage}`, 'dmg')
       if (hit.combo) pop('enemy', `COMBO ×${streak.current}`, 'good')
       setAnim((current) => ({ ...current, flash: hit.multiplier > 1 ? 'super' : 'hit' }))
       await flashAnim('enemy', 'hurt', 450)
       setAnim((current) => ({ ...current, flash: '' }))
       rerender()
-      const note = effectivenessText(hit.multiplier)
-      if (note) await say(note)
+      if (hit.multiplier > 1) await shout('SUPER EFFECTIVE!', 'super', `${concepts[move.concept].label} beats ${concepts[getSpecies(enemy().species).concept].label}`)
+      else if (hit.multiplier < 1) await shout('NOT VERY EFFECTIVE', 'weak')
       if (isFainted(enemies.current[enemyIndex.current])) return (await enemyFainted()) ? 'won' : 'ok'
     } else {
       streak.current = 0
       stat(() => ({ streak: 0 }))
       audio.sfx('miss')
+      await shout('BUG!', 'bug', 'The move fizzled', 900)
       await say(`${displayName(me)}'s ${move.name} missed! The code had a bug.`)
     }
     return (await enemyTurn()) === 'lost' ? 'lost' : 'ok'
@@ -233,6 +271,8 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
     if (shakes === 3) {
       audio.sfx('catch')
       setAnim((current) => ({ ...current, cube: 'caught' }))
+      burst('enemy', getSpecies(foe.species).concept, 36, 'confetti')
+      await shout('GOTCHA!', 'catch', `${getSpecies(foe.species).name} joins you`, 1600)
       await say(`Gotcha! ${getSpecies(foe.species).name} was caught!`)
       const { save: next, where } = addPyxie(get(), { ...foe, caughtAt: get().map })
       set(() => ({ ...next, stats: { ...next.stats, catches: next.stats.catches + 1 } }))
@@ -302,11 +342,13 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
     rerender()
     if (run.broken === total) {
       audio.sfx('super')
+      burst('enemy', 'logic', 20)
+      await shout('FIREWALL DOWN!', 'firewall', `All ${total} tests passed`, 1300)
       answer('won')
       return run
     }
     // Every failing test hits back.
-    await wait(300)
+    await shout(run.broken ? `${run.broken}/${total} SHIELDS` : 'BLOCKED!', run.broken ? 'combo' : 'bug', `${run.failed} test${run.failed === 1 ? '' : 's'} failed`, 1000)
     const me = active()
     const damage = Math.max(1, Math.floor(statsFor(me.species, me.level).maxHp * 0.13)) * Math.max(1, run.failed)
     await flashAnim('enemy', 'attack', 300)
@@ -324,6 +366,8 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
       set((save) => markSeen({ ...save, stats: { ...save.stats, battles: save.stats.battles + 1 } }, enemy().species))
       await wait(900)
       setIntro(false)
+      if (spec.kind === 'trainer') await shout('VS', 'start', `${spec.trainer.title} ${spec.name}`, 1500)
+      else await shout(spec.legendary ? 'LEGENDARY!' : 'WILD PYXIE!', 'start', displayName(enemy()), 1300)
       if (spec.kind === 'wild') await say(`${spec.legendary ? 'The legendary' : 'A wild'} ${displayName(enemy())} appeared!`)
       else {
         await say(`${spec.trainer.title} ${spec.name} wants to battle!`)
@@ -370,13 +414,16 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
       }
       if (outcome === 'win') {
         audio.play('win')
+        setMood('victory')
+        burst('enemy', 'print', 40, 'confetti')
+        await shout('VICTORY!', 'victory', spec.kind === 'trainer' ? `You beat ${spec.name}!` : undefined, 2000)
         stat((s) => ({ wins: s.wins + 1 }))
         if (spec.kind === 'wild' && rng.chance(0.15)) {
           set((save) => giveItem(save, 'patch'))
           await say('It dropped a Patch!')
         }
       }
-      if (outcome === 'lose') await say('Your whole team fainted…')
+      if (outcome === 'lose') { setMood('defeat'); await shout('DEFEATED…', 'defeat', 'Every pyxie fainted', 1800); await say('Your whole team fainted…') }
       onEnd(outcome)
     }
     void runBattle()
@@ -402,8 +449,14 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
   const xpFrom = Math.floor(me.level ** 3 * 0.6)
   const xpTo = Math.floor((me.level + 1) ** 3 * 0.6)
 
-  return <div className={`battle battle--${bg} ${intro ? 'is-intro' : ''} ${anim.flash ? `flash-${anim.flash}` : ''}`}>
+  return <div className={`battle battle--${bg} ${intro ? 'is-intro' : ''} ${anim.flash ? `flash-${anim.flash}` : ''} ${mood ? `is-${mood}` : ''}`}>
     <div className="battle__stage">
+      {banner && <div key={banner.id} className={`banner banner--${banner.tone}`} aria-live="assertive"><b>{banner.text}</b>{banner.sub && <small>{banner.sub}</small>}</div>}
+      {mood === 'victory' && <div className="rays" aria-hidden="true" />}
+      {fx.map((item) => item.kind === 'shot'
+        ? <span key={item.id} className={`fx-shot fx-shot--${item.side}`} style={{ '--c': item.color } as CSSProperties}>{item.glyph}</span>
+        : <span key={item.id} className={`fx-${item.kind} fx--${item.side}`} style={{ '--c': item.color, '--a': `${item.angle}deg`, '--d': `${item.dist}px`, '--delay': `${item.delay}ms` } as CSSProperties}>{item.kind === 'spark' ? item.glyph : ''}</span>)}
+      <BattleBackdrop area={bg} />
       <div className="battle__sky" aria-hidden="true"><i /><i /><i /></div>
       <section className="battle__foe">
         <div className="hpcard hpcard--foe">

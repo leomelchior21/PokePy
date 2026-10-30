@@ -22,6 +22,9 @@ import { ChoiceBox, DialogBox } from './Dialog'
 import { Menu } from './Menu'
 import { Shop } from './Shop'
 import { BadgeIcon } from './Badge'
+import { DevPanel } from './DevPanel'
+import { canUseDevTools } from '../game/chapters'
+import { getMap } from '../world/maps'
 
 type Overlay =
   | { type: 'dialog'; lines: string[]; speaker?: string; resolve: () => void }
@@ -35,11 +38,13 @@ type Overlay =
 
 const keyDir: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' }
 
-export function GameScreen({ initial, onQuit }: { initial: SaveState; onQuit: () => void }) {
+export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState; onQuit: () => void; onRestart: (save: SaveState) => void }) {
   const saveRef = useRef(initial)
   const [save, setSave] = useState(initial)
   const [overlay, setOverlay] = useState<Overlay | null>(null)
   const [menu, setMenu] = useState(false)
+  const [dev, setDev] = useState(false)
+  const devAllowed = canUseDevTools(initial.username)
   const [banner, setBanner] = useState<{ text: string; id: number } | null>(null)
   const [flash, setFlash] = useState(false)
   const [sync, setSync] = useState<'saved' | 'saving' | 'offline'>('saved')
@@ -298,6 +303,12 @@ export function GameScreen({ initial, onQuit }: { initial: SaveState; onQuit: ()
       audio.unlock()
       const runtime = runtimeRef.current
       if (!runtime) return
+      if (devAllowed && (event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'k' || (event.shiftKey && event.key.toLowerCase() === 'f'))) {
+        event.preventDefault()
+        if (!overlay) { setDev((open) => !open); runtime.clearInput() }
+        return
+      }
+      if (dev) return
       if (event.key === 'Escape' || event.key === 'm' || event.key === 'M') {
         if (!overlay && !runtime.busy) { setMenu((open) => !open); audio.sfx('select') }
         return
@@ -318,11 +329,11 @@ export function GameScreen({ initial, onQuit }: { initial: SaveState; onQuit: ()
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
-  }, [menu, overlay])
+  }, [dev, devAllowed, menu, overlay])
 
   useEffect(() => {
-    if (runtimeRef.current) runtimeRef.current.busy = Boolean(overlay) || menu || runtimeRef.current.busy
-  }, [menu, overlay])
+    if (runtimeRef.current) runtimeRef.current.busy = Boolean(overlay) || menu || dev || runtimeRef.current.busy
+  }, [dev, menu, overlay])
 
   const touch = (dir: Direction, on: boolean) => {
     audio.unlock()
@@ -355,6 +366,7 @@ export function GameScreen({ initial, onQuit }: { initial: SaveState; onQuit: ()
       <span className="hud__chip" title="Badges">🏅 {save.badges.length}/6</span>
       <span className="hud__chip" title="Bits">◈ {save.bits}</span>
       <span className={`hud__sync is-${sync}`} title={sync === 'offline' ? 'Saved on this device. Cloud sync is waiting.' : 'Saved'}>{sync === 'saving' ? '⟳' : sync === 'offline' ? '☁︎✕' : '☁︎✓'}</span>
+      {devAllowed && <button className="hud__dev" onClick={() => { if (!overlay) setDev(true) }} title="Teacher tools (Ctrl+K)">DEV</button>}
       <button className="hud__menu" onClick={() => { if (!overlay && !runtimeRef.current?.busy) { setMenu(true); audio.sfx('select') } }}>MENU</button>
     </div>
 
@@ -374,6 +386,24 @@ export function GameScreen({ initial, onQuit }: { initial: SaveState; onQuit: ()
     {flash && <div className="screen-flash" />}
     {toast && <div className="toast">{toast}</div>}
 
+    {dev && !overlay && <DevPanel get={get} set={set} onClose={() => { setDev(false); if (runtimeRef.current) runtimeRef.current.busy = false; lastClose.current = performance.now() }}
+      onJump={(next) => { setDev(false); audio.stop(); onRestart(next) }}
+      onPlace={(map, x, y) => { setDev(false); if (runtimeRef.current) { runtimeRef.current.busy = false; runtimeRef.current.place(map, x, y, 'down') } }}
+      onWild={(species, level) => { setDev(false); if (runtimeRef.current) runtimeRef.current.busy = false; window.setTimeout(() => void run(async () => {
+        const enemy = createPyxie(species, level, rng)
+        set((s) => markSeen(s, enemy.species))
+        const outcome = await ui.battle({ kind: 'wild', enemy, canRun: true, canCatch: true, bg: runtimeRef.current!.map.battleBg ?? runtimeRef.current!.map.area })
+        closeOverlay()
+        if (outcome === 'lose') await blackoutNow()
+      }), 50) }}
+      onTrainer={(mapId, npcId) => {
+        setDev(false)
+        if (runtimeRef.current) runtimeRef.current.busy = false
+        const npc = getMap(mapId).npcs?.find((item) => item.id === npcId)
+        if (!npc?.trainer) return
+        runtimeRef.current?.place(mapId, npc.x, npc.y + 1, 'up')
+        window.setTimeout(() => void run(() => trainerEncounter(npc, false)), 400)
+      }} />}
     {menu && !overlay && <Menu get={get} set={set} onClose={closeMenu} onQuit={quit} onSaved={() => toTitle('Game saved!')} />}
 
     {overlay?.type === 'dialog' && <div className="overlay overlay--dialog"><DialogBox key={overlay.lines.join('|')} lines={overlay.lines} speaker={overlay.speaker} speed={save.settings.textSpeed} onDone={() => { const r = overlay.resolve; closeOverlay(); r() }} /></div>}

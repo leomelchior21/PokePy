@@ -211,7 +211,7 @@ export class WorldRuntime {
     }
     this.trail = [{ x: this.x, y: this.y, facing: this.facing }, ...this.trail].slice(0, 3)
     if (result.type === 'edge') {
-      this.transition(() => this.place(result.map, result.x, result.y, dir))
+      this.transition(() => this.arriveAt(result.map, result.x, result.y, dir))
       return
     }
     const duration = (this.running ? RUN_MS : WALK_MS) * (result.jump ? 1.6 : 1)
@@ -232,8 +232,7 @@ export class WorldRuntime {
     const flags = this.flags()
     const warp = warpAt(this.map, this.x, this.y)
     if (warp) return this.useWarp(warp)
-    const trigger = this.map.triggers?.find((item) => this.x >= item.x && this.x < item.x + (item.w ?? 1) && this.y >= item.y && this.y < item.y + (item.h ?? 1)
-      && (!item.ifFlag || flags.has(item.ifFlag)) && (!item.unlessFlag || !flags.has(item.unlessFlag)))
+    const trigger = this.triggerHere(flags)
     if (trigger) return this.hooks.onTrigger(trigger)
     const save = this.hooks.getSave()
     const spotter = spottedBy(this.map, this.x, this.y, flags, this.npcPos, this.npcFacing, new Set(save.defeated))
@@ -253,6 +252,18 @@ export class WorldRuntime {
     }
   }
 
+  private triggerHere(flags: ReadonlySet<string>): Trigger | undefined {
+    return this.map.triggers?.find((item) => this.x >= item.x && this.x < item.x + (item.w ?? 1) && this.y >= item.y && this.y < item.y + (item.h ?? 1)
+      && (!item.ifFlag || flags.has(item.ifFlag)) && (!item.unlessFlag || !flags.has(item.unlessFlag)))
+  }
+
+  /** Arriving through a door onto a story tile starts the story too. */
+  private arriveAt(map: string, x: number, y: number, facing: Direction) {
+    this.place(map, x, y, facing)
+    const trigger = this.triggerHere(this.flags())
+    if (trigger) window.setTimeout(() => this.hooks.onTrigger(trigger), 350)
+  }
+
   private useWarp(warp: Arrival) {
     const save = this.hooks.getSave()
     const req = warp.requires
@@ -267,7 +278,7 @@ export class WorldRuntime {
       }
     }
     this.hooks.sfx('door')
-    this.transition(() => this.place(warp.map, warp.x, warp.y, warp.facing))
+    this.transition(() => this.arriveAt(warp.map, warp.x, warp.y, warp.facing))
   }
 
   /** Fades to black, runs the change, fades back in. */
@@ -401,8 +412,8 @@ export class WorldRuntime {
       const art = pyxieCanvas(lead.species, lead.shiny)
       drawables.push({ y: fy - 1, draw: () => {
         this.shadow(ctx, fx, fy)
-        const bob = Math.abs(Math.sin(this.time / 160)) * 1.5
-        if (art) ctx.drawImage(art, fx, fy - 3 - bob)
+        const bob = this.mover ? Math.abs(Math.sin(this.time / 90)) * 1.5 : 0
+        if (art) ctx.drawImage(art, fx, fy - 1 - bob)
         this.grassOver(ctx, fx, fy, follow.x, follow.y, frame)
       } })
     }
@@ -411,7 +422,7 @@ export class WorldRuntime {
       const walking = this.mover ? (this.mover.t / this.mover.duration < 0.5 ? 1 + this.walkFrame : 0) : 0
       const art = personCanvas(look, this.facing, walking)
       this.shadow(ctx, player.x, player.y)
-      if (art) ctx.drawImage(art, player.x, player.y - 4 - player.lift)
+      if (art) ctx.drawImage(art, player.x, player.y - 1 - player.lift)
       if (!this.mover || !this.mover.jump) this.grassOver(ctx, player.x, player.y, this.mover?.x ?? this.x, this.mover?.y ?? this.y, frame)
     } })
     drawables.sort((a, b) => a.y - b.y).forEach((item) => item.draw())
@@ -460,13 +471,13 @@ export class WorldRuntime {
     if (npc.pyxie) {
       const art = pyxieCanvas(npc.pyxie)
       const bob = Math.sin(this.time / 250) * 2
-      if (art) ctx.drawImage(art, pos.x, pos.y - 6 + bob)
+      if (art) ctx.drawImage(art, pos.x, pos.y - 3 + bob)
       return
     }
     const moving = this.npcMove[npc.id]
     const frame = moving ? (moving.t / moving.duration < 0.5 ? 1 : 2) : 0
     const art = personCanvas(npc.look, this.npcFacing[npc.id] ?? npc.facing, frame)
-    if (art) ctx.drawImage(art, pos.x, pos.y - 4)
+    if (art) ctx.drawImage(art, pos.x, pos.y - 1)
   }
 
   private drawThing(ctx: CanvasRenderingContext2D, thing: Thing) {
@@ -483,9 +494,9 @@ export class WorldRuntime {
   }
 
   private shadow(ctx: CanvasRenderingContext2D, x: number, y: number) {
-    ctx.fillStyle = 'rgba(20,12,30,0.28)'
+    ctx.fillStyle = 'rgba(20,12,30,0.3)'
     ctx.beginPath()
-    ctx.ellipse(x + 8, y + 14, 5, 2, 0, 0, Math.PI * 2)
+    ctx.ellipse(x + 8, y + 14.5, 5.5, 2, 0, 0, Math.PI * 2)
     ctx.fill()
   }
 

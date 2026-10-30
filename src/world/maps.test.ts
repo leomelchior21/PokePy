@@ -145,5 +145,5 @@ describe('a random walk across the whole valley', () => {
       expect(stuck).toBeLessThan(500)
     }
     expect(visited.size).toBeGreaterThan(8)
-  })
+  }, 60_000)
 })

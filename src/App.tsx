@@ -8,7 +8,7 @@ import { Title } from './ui/Title'
 export default function App() {
   const [save, setSave] = useState<SaveState | null>(null)
   return save
-    ? <GameScreen key={save.createdAt} initial={save} onQuit={() => setSave(null)} />
+    ? <GameScreen key={save.createdAt} initial={save} onQuit={() => setSave(null)} onRestart={setSave} />
     : <Title onStart={(next) => {
       audio.setMusic(next.settings.music)
       audio.sfxOn = next.settings.sfx

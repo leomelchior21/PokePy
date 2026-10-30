@@ -49,8 +49,10 @@ export function makeCanvas(w: number, h: number): HTMLCanvasElement {
   return canvas
 }
 
-/** Draws a grid onto a fresh canvas at one pixel per cell. */
-export function renderGrid(key: string, grid: string[][], palette: Palette): HTMLCanvasElement | null {
+const flat = new Set(['O', 'w', 'p', 'E', 'q', 'g', 'k', 't', 'r'])
+
+/** Draws a grid onto a fresh canvas at one pixel per cell. With volume, every color gets light and shadow. */
+export function renderGrid(key: string, grid: string[][], palette: Palette, volume = false): HTMLCanvasElement | null {
   const cached = canvasCache.get(key)
   if (cached) return cached
   if (!hasCanvas()) return null
@@ -62,7 +64,14 @@ export function renderGrid(key: string, grid: string[][], palette: Palette): HTM
     for (let x = 0; x < w; x += 1) {
       const c = grid[y][x]
       if (c === '.') continue
-      ctx.fillStyle = c === 'O' ? palette.O ?? OUTLINE : palette[c] ?? '#ff00ff'
+      const base = c === 'O' ? palette.O ?? OUTLINE : palette[c] ?? '#ff00ff'
+      let color = base
+      if (volume && !flat.has(c)) {
+        const edge = (dx: number, dy: number) => { const n = grid[y + dy]?.[x + dx]; return n === undefined || n === '.' || n === 'O' }
+        if (edge(0, 1) || edge(1, 0)) color = shade(base, -0.22)
+        else if (edge(0, -1) || edge(-1, 0)) color = shade(base, 0.22)
+      }
+      ctx.fillStyle = color
       ctx.fillRect(x, y, 1, 1)
     }
   }
