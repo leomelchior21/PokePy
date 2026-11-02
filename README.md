@@ -35,6 +35,11 @@ coding challenges, then face six Lab Masters whose pyxies only fall to real Pyth
   mechanic. Students write real Python in an editor, and every hidden test that passes breaks a shield.
 - **Progress**: Trainer XP opens each Lab, badges open the Grand Hackathon, pyxies level up and evolve.
 
+Visual aid comes first: whenever the story gives something new (the Codex, Bytecubes, Patches) or
+names a new place, it is shown big on screen. Items get a spotlit card; places get an aerial view of the
+whole map plus the illustrated valley map with an arrow on it. Arrows also mark every path out of a map.
+Math stays inside + - * / and the comparisons == != > >= < <= (no // or %).
+
 It is built for school iPads: no text under 12 px, labels that never wrap mid-phrase, mini-games that
 zoom in on big screens, and battle scenes that give the mini-game the whole screen when held upright.
 

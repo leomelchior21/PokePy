@@ -318,6 +318,29 @@ function counter(ctx: Ctx, map: GameMap, room: Room, ox: number, oy: number, tx:
   if (room !== 'mart' && hash(tx, ty, 6) > 0.7) { px(ctx, '#e8483f', ox + 6, oy + 3, 4, 4); px(ctx, '#ffffff', ox + 7, oy + 4, 2, 2) }
 }
 
+/** Wooden stairs against the back wall, with an arrow that says which way they go. */
+function stairs(ctx: Ctx, ox: number, oy: number, down: boolean) {
+  const top = oy - 6
+  px(ctx, INK, ox + 1, top, 14, 22)
+  const tones = ['#6e4526', '#7e5230', '#8e5f38', '#a06d40', '#b47c48', '#c68c52']
+  for (let k = 0; k < 5; k += 1) {
+    // Going up, the far steps catch the light; going down, they sink into shadow.
+    const tone = down ? tones[k] : tones[5 - k]
+    const y = top + 1 + k * 4
+    px(ctx, tone, ox + 3, y, 10, 4)
+    px(ctx, shade(tone, 0.3), ox + 3, y, 10, 1)
+    px(ctx, shade(tone, -0.3), ox + 3, y + 3, 10, 1)
+  }
+  px(ctx, '#5a3a1a', ox + 2, top + 1, 1, 20); px(ctx, '#5a3a1a', ox + 13, top + 1, 1, 20)
+  px(ctx, '#c68c52', ox + 2, top + 1, 1, 1); px(ctx, '#c68c52', ox + 13, top + 1, 1, 1)
+  // The arrow: up for the bedroom, down for the ground floor.
+  const ax = ox + 8
+  const ay = oy + 7
+  const arrow = down ? [[0, 3], [-1, 2], [0, 2], [1, 2], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 1], [0, 0], [0, -1], [0, -2]] : [[0, -3], [-1, -2], [0, -2], [1, -2], [-2, -1], [-1, -1], [0, -1], [1, -1], [2, -1], [0, 0], [0, 1], [0, 2]]
+  for (const [x, y] of arrow) px(ctx, INK, ax + x - 1, ay + y, 3, 1)
+  for (const [x, y] of arrow) px(ctx, '#ffd23f', ax + x, ay + y, 1, 1)
+}
+
 /** Draws an indoor tile and returns true, or returns false for tiles the outdoor painter owns. */
 export function drawInteriorTile(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: number, oy: number, tint: string): boolean {
   if (map.area === 'cave') return false
@@ -338,6 +361,7 @@ export function drawInteriorTile(ctx: Ctx, map: GameMap, tx: number, ty: number,
     case 'G': floorOf(ctx, map, ox, oy, tx, ty, tint); plant(ctx, ox, oy, tx, ty); return true
     case 'D': floorOf(ctx, map, ox, oy, tx, ty, tint); table(ctx, map, room, ox, oy, tx, ty); return true
     case 'X': floorOf(ctx, map, ox, oy, tx, ty, tint); counter(ctx, map, room, ox, oy, tx, ty); return true
+    case 'H': floorOf(ctx, map, ox, oy, tx, ty, tint); stairs(ctx, ox, oy, map.id.endsWith('-2f')); return true
     default: return false
   }
 }

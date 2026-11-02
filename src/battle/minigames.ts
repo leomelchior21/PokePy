@@ -72,7 +72,7 @@ function flappyGame(concept: Concept, tier: Tier, rng: Rng): FlappyChallenge {
   const steps = tier === 1 ? 3 : 4
   const ops = tier === 1
     ? [() => `${v} = ${v} + ${rng.int(1, 6)}`, () => `${v} = ${v} - ${rng.int(1, 3)}`, () => `${v} = ${v} * 2`, () => `${v} = ${rng.int(10, 20)}`]
-    : [() => `${v} = ${v} + ${rng.int(2, 9)}`, () => `${v} = ${v} * ${rng.int(2, 3)}`, () => `${v} = ${v} // 2`, () => `${v} = ${v} % ${rng.int(3, 5)} + ${rng.int(1, 4)}`, () => `${v} = ${v} - ${rng.int(1, 5)}`]
+    : [() => `${v} = ${v} + ${rng.int(2, 9)}`, () => `${v} = ${v} * ${rng.int(2, 3)}`, () => `${v} = ${v} * 2 - ${rng.int(1, 5)}`, () => `${v} = ${v} + ${v}`, () => `${v} = ${v} - ${rng.int(1, 5)}`]
   const code = [`${v} = ${start}`]
   while (code.length <= steps) {
     const line = rng.pick(ops)()
@@ -112,7 +112,7 @@ function condition(concept: Concept, tier: Tier, rng: Rng, setup: string[]): str
   if (concept === 'math') {
     const a = rng.int(2, 9)
     const b = rng.int(2, 9)
-    return rng.pick([`${a} + ${b} == ${a + b + rng.pick([0, 0, 1, -1])}`, `${a * b} % 2 == 0`, `${a * b} // ${b} == ${a + rng.pick([0, 0, 1])}`, `${a} * ${b} > ${rng.int(10, 40)}`])
+    return rng.pick([`${a} + ${b} == ${a + b + rng.pick([0, 0, 1, -1])}`, `${a} * ${b} != ${a * b + rng.pick([0, 0, 2])}`, `${a * b} / ${b} == ${a + rng.pick([0, 0, 1])}`, `${a} * ${b} > ${rng.int(10, 40)}`, `${a} - ${b} <= ${rng.int(-3, 4)}`])
   }
   if (rng.chance(0.2)) {
     const word = rng.pick(['cat', 'robot', 'yes', 'pixel'])
@@ -157,7 +157,7 @@ function mathTiles(rng: Rng, setup: string[]): Tile[] {
     for (let tries = 0; tries < 60 && forms.size < 6; tries += 1) {
       const a = rng.int(1, v - 1)
       const k = rng.int(2, 4)
-      const candidates = [`${a} + ${v - a}`, `${v + k} - ${k}`, `${v * k} // ${k}`, `${v * k + 1} // ${k}`, `${v + k * 3} - ${k * 3}`]
+      const candidates = [`${a} + ${v - a}`, `${v + k} - ${k}`, `${v * 2} - ${v}`, `${v + k * 3} - ${k * 3}`]
       if (v % 2 === 0) candidates.push(`2 * ${v / 2}`, `${v / 2} + ${v / 2}`)
       if (v % 3 === 0) candidates.push(`3 * ${v / 3}`)
       for (const [name, raw] of vars) { const n = Number(raw); if (v - n > 0) candidates.push(`${name} + ${v - n}`); if (n - v > 0) candidates.push(`${name} - ${n - v}`); if (v % n === 0 && v / n > 1) candidates.push(`${name} * ${v / n}`) }
@@ -247,8 +247,8 @@ function blocksGame(concept: Concept, tier: Tier, rng: Rng): BlocksChallenge {
     text: () => ({ solution: [`name = "${name}"`, `msg = "${greet} " + name`, 'print(msg)'], distractors: [`msg = "${greet}" + "name"`, 'print("msg")'] }),
     math: () => {
       const candy = rng.int(13, 29)
-      const kids = rng.int(3, 5)
-      return { solution: [`candy = ${candy}`, `each = candy // ${kids}`, 'print(each)'], distractors: [`each = candy / ${kids}`, 'print(candy // each)'] }
+      const eaten = rng.int(2, 9)
+      return { solution: [`candy = ${candy}`, `left = candy - ${eaten}`, 'print(left)'], distractors: [`left = candy + ${eaten}`, 'print("left")'] }
     },
   }
   const { solution, distractors } = variants[concept]()

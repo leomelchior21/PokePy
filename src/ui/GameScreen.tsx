@@ -9,7 +9,7 @@ import { badges } from '../data/progression'
 import { audio } from '../engine/audio'
 import { hasCanvas } from '../engine/pixels'
 import { WorldRuntime } from '../game/runtime'
-import { resolveScript, rivalTeam, type ScriptContext, type ScriptUI } from '../game/scripts'
+import { resolveScript, rivalTeam, type ScriptContext, type ScriptUI, type ShowSpec } from '../game/scripts'
 import { addBadge, blackout, giveItem, hasFlag, markDefeated, markSeen, setFlag } from '../game/state'
 import { randomRng } from '../lib/rng'
 import { flushCloud, onSync, saveCloud, saveLocal } from '../save/cloud'
@@ -25,6 +25,8 @@ import { BadgeIcon } from './Badge'
 import { DevPanel } from './DevPanel'
 import { Joystick } from './Joystick'
 import { PyxieInspector } from './PyxieInspector'
+import { Showcase } from './Showcase'
+import { mapNodes } from '../world/valley'
 import { canUseDevTools } from '../game/chapters'
 import { getMap } from '../world/maps'
 
@@ -38,6 +40,7 @@ type Overlay =
   | { type: 'duel'; duelId: string; title: string; resolve: (won: boolean) => void }
   | { type: 'badge'; badge: string; resolve: () => void }
   | { type: 'inspect'; species: string; choose?: string; banner?: string; resolve: (chosen: boolean) => void }
+  | { type: 'show'; spec: ShowSpec; resolve: () => void }
 
 const keyDir: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' }
 
@@ -80,6 +83,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     sfx: (name) => audio.sfx(name),
     flash: async () => { setFlash(true); await new Promise((r) => window.setTimeout(r, 500)); setFlash(false) },
     inspect: (species, options) => new Promise<boolean>((resolve) => setOverlay({ type: 'inspect', species, choose: options?.choose, banner: options?.banner, resolve })),
+    show: (spec) => new Promise<void>((resolve) => setOverlay({ type: 'show', spec, resolve })),
   }), [])
 
   const say = ui.say
@@ -186,7 +190,10 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
       onEnterMap: (map) => {
         setBanner({ text: map.name, id: Date.now() })
         audio.play(map.music)
-        if (!hasFlag(saveRef.current, `visited:${map.id}`)) set((s) => setFlag(s, `visited:${map.id}`))
+        if (hasFlag(saveRef.current, `visited:${map.id}`)) return
+        set((s) => setFlag(s, `visited:${map.id}`))
+        // The first time a town or route appears, it is shown big: from above, and on the valley map.
+        if (mapNodes.some((node) => node.id === map.id)) void run(() => ui.show!({ kind: 'place', map: map.id }))
       },
       onBlockedDoor: (message) => void run(() => say(message)),
       onTrigger: (trigger) => void runScript(trigger.script),
@@ -206,8 +213,10 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
       onItem: (item) => {
         if (performance.now() - lastClose.current < 250) return
         void run(async () => {
-          set((s) => setFlag(giveItem(s, item.item, item.count), itemFlag(item.id)))
+          const first = !hasFlag(saveRef.current, `seen-item:${item.item}`)
+          set((s) => setFlag(setFlag(giveItem(s, item.item, item.count), itemFlag(item.id)), `seen-item:${item.item}`))
           audio.sfx('item')
+          if (first) await ui.show!({ kind: 'item', item: item.item, count: item.count })
           await say(`${item.hidden ? 'You found a hidden' : 'You found'} ${itemName(item.item, item.count)}!`)
         })
       },
@@ -295,11 +304,15 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
   useEffect(() => {
     if (hasFlag(saveRef.current, 'intro_done')) return
     const id = window.setTimeout(() => void run(async () => {
-      await say([`${saveRef.current.displayName.split(' ')[0]}! Wake up!`, 'Today is the day: Leo Maker wants to see you at the Makerspace.', 'Move with the arrows, WASD or the joystick, in any direction. Talk with A, Enter or Space. Open the menu with MENU or Esc.'], 'Mom')
+      // Grandma wakes you up in your room upstairs, and shows where the adventure begins.
+      await say(['Zzz… Zzz…'])
+      await say([`${saveRef.current.displayName.split(' ')[0]}! Wake up, sleepyhead! The sun is already up!`, 'Today is the big day: Leo Maker wants to see you at his Makerspace.'], 'Grandma')
+      await ui.show!({ kind: 'place', map: 'vila', building: 'makerspace', note: 'The Makerspace: the building with the orange roof, in Vila Maker.' })
+      await say(['Go down the stairs, out the door, and look for the orange roof.', 'Move with the arrows, WASD or the joystick, in any direction. Talk with A, Enter or Space. Open the menu with MENU or Esc.', 'Off you go! And don\'t forget your goggles.'], 'Grandma')
       set((s) => setFlag(s, 'intro_done'))
     }), 600)
     return () => window.clearTimeout(id)
-  }, [run, say, set])
+  }, [run, say, set, ui])
 
   // Keyboard.
   useEffect(() => {
@@ -405,6 +418,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     {overlay?.type === 'credits' && <div className="overlay overlay--battle"><Credits save={save} onClose={() => { const r = overlay.resolve; closeOverlay(); r() }} /></div>}
     {overlay?.type === 'inspect' && <PyxieInspector species={overlay.species} banner={overlay.banner} onClose={() => { const r = overlay.resolve; closeOverlay(); r(false) }}
       actions={overlay.choose ? [{ label: overlay.choose, primary: true, onClick: () => { const r = overlay.resolve; closeOverlay(); r(true) } }, { label: 'NOT YET', onClick: () => { const r = overlay.resolve; closeOverlay(); r(false) } }] : undefined} />}
+    {overlay?.type === 'show' && <Showcase spec={overlay.spec} save={save} onClose={() => { const r = overlay.resolve; closeOverlay(); r() }} />}
     {overlay?.type === 'badge' && badgeInfo && <div className="overlay overlay--badge" onClick={() => { const r = overlay.resolve; closeOverlay(); r() }}>
       <div className="badge-award"><BadgeIcon id={badgeInfo.id} size={140} /><small>{badgeInfo.lab.toUpperCase()}</small><h2>{badgeInfo.name}!</h2><p>{badgeInfo.master} recognizes your code.</p><button className="btn btn--primary" autoFocus>AWESOME!</button></div>
     </div>}

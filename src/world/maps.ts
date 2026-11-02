@@ -56,9 +56,32 @@ const vila: GameMap = {
   triggers: [{ x: 11, y: 1, w: 2, script: 'leo-stop', unlessFlag: 'got_starter' }],
 }
 
-const home = house('home', 'Your House', { map: 'vila', x: 5, y: 6 }, [
+// The ground floor: the bed is upstairs now, so the stairs stand where it was.
+const homeGround = house('home', 'Your House', { map: 'vila', x: 5, y: 6 }, [
   { id: 'mom', name: 'Mom', look: looks.mom, x: 3, y: 5, facing: 'right', script: 'mom' },
 ], [{ x: 5, y: 1, script: 'tv' }, { x: 1, y: 1, script: 'home-shelf' }])
+const home: GameMap = {
+  ...homeGround,
+  rows: homeGround.rows.map((row, y) => (y === 1 ? `${row.slice(0, 10)}H${row.slice(11)}` : y === 2 ? `${row.slice(0, 10)}_${row.slice(11)}` : row)),
+  warps: [...(homeGround.warps ?? []), { x: 10, y: 1, to: 'home-2f', tx: 8, ty: 2, facing: 'down' }],
+}
+
+// Upstairs: your bedroom, where Grandma wakes you up on the first morning.
+const homeUpstairs: GameMap = {
+  id: 'home-2f', name: 'Your Room', area: 'house', music: 'home', outside: 'void',
+  rows: [
+    'WWWWWWWWWW',
+    'WBKK_V__HW',
+    'WB_______W',
+    'W__RRR___W',
+    'WG_RRR__GW',
+    'W________W',
+    'WWWWWWWWWW',
+  ],
+  warps: [{ x: 8, y: 1, to: 'home', tx: 10, ty: 2, facing: 'down' }],
+  npcs: [{ id: 'grandma', name: 'Grandma', look: looks.grandma, x: 3, y: 2, facing: 'left', script: 'grandma' }],
+  things: [{ x: 5, y: 1, script: 'room-pc' }, { x: 2, y: 1, script: 'home-shelf' }, { x: 3, y: 1, script: 'home-shelf' }],
+}
 
 const brianHouse = house('brian-house', 'Brian\'s House', { map: 'vila', x: 17, y: 6 }, [
   person('brian-sis', 'Brian\'s Sister', 22, 7, 5, 'left', ['Brian left at dawn with his goggles on his head.', 'He says he will be the best maker in the valley.', 'He also says that about his sandwiches.', 'Once he hid a rubber fish in Leo Maker\'s toolbox.', 'Leo screamed so loud the 3D printers paused. He is VERY afraid of fish.']),
@@ -340,7 +363,7 @@ const route3: GameMap = {
   npcs: [
     trainer('r3-luna', 'Beach Coder Luna', 5, 8, 10, 'right', tr('r3-luna', 'Beach Coder', [['quotie', 13], ['quotie', 14]], 220, 'Two Quoties make a string!', 'My string snapped.', 'Glue texts with +. Spaces go inside the quotes.', { sight: 3 })),
     trainer('r3-dante', 'Maker Dante', 18, 17, 16, 'left', tr('r3-dante', 'Maker', [['memoth', 14], ['echobat', 14]], 230, 'I solder on the beach. The sea breeze cools it.', 'Cold solder joint. Classic.', 'Never touch the hot end of a soldering iron!')),
-    trainer('r3-iris', 'Coder Iris', 19, 8, 24, 'right', tr('r3-iris', 'Coder', [['modmole', 14], ['quotie', 15]], 240, 'My Modmole digs remainders!', 'Nothing left over for me...', '% gives what is left after dividing.')),
+    trainer('r3-iris', 'Coder Iris', 19, 8, 24, 'right', tr('r3-iris', 'Coder', [['modmole', 14], ['quotie', 15]], 240, 'My Modmole digs tunnels!', 'Nothing left over for me...', '10 / 4 is 2.5. Python keeps the decimal.')),
     { id: 'brian-r3', name: 'Brian', look: looks.brian, x: 12, y: 3, facing: 'left', script: 'rival2', hideIf: 'rival2' },
   ],
   triggers: [{ x: 10, y: 4, w: 2, script: 'rival2', unlessFlag: 'rival2' }],
@@ -424,7 +447,7 @@ const route4: GameMap = {
   edges: [{ side: 'right', to: 'stringhaven', offset: 0 }, { side: 'left', to: 'abacus', offset: 0 }],
   encounters: { rate: 0.12, table: [{ species: 'modmole', min: 17, max: 21, weight: 40 }, { species: 'echobat', min: 17, max: 20, weight: 20 }, { species: 'memoth', min: 17, max: 20, weight: 15 }, { species: 'quotie', min: 17, max: 20, weight: 15 }, { species: 'booly', min: 18, max: 20, weight: 10 }] },
   npcs: [
-    trainer('r4-hiker', 'Hiker Bento', 6, 24, 7, 'left', tr('r4-hiker', 'Hiker', [['modmole', 19], ['modmole', 20]], 300, 'These canyons were divided evenly. By Modmoles.', 'Rock bottom.', 'Use // to divide without decimals.')),
+    trainer('r4-hiker', 'Hiker Bento', 6, 24, 7, 'left', tr('r4-hiker', 'Hiker', [['modmole', 19], ['modmole', 20]], 300, 'These canyons were divided evenly. By Modmoles.', 'Rock bottom.', 'Use / to divide. The answer always has a decimal.')),
     trainer('r4-zoe', 'Coder Zoe', 24, 26, 14, 'up', tr('r4-zoe', 'Coder', [['quotie', 19], ['memoth', 20]], 300, 'Order of operations! Fight me!', 'You multiplied before I could add.', 'Python does * before +.', { sight: 3 })),
     trainer('r4-caio', 'Maker Caio', 8, 6, 7, 'right', tr('r4-caio', 'Maker', [['booly', 20], ['modmole', 21]], 320, 'I made it through the laser cave!', 'I should have stayed in there.', 'Booly answers only True or False.')),
   ],
@@ -510,7 +533,7 @@ const abacus: GameMap = {
   ],
   edges: [{ side: 'right', to: 'route4', offset: 0 }, { side: 'up', to: 'route5', offset: -1 }],
   npcs: [
-    person('abacus-math', 'Mathlete', 25, 8, 13, 'right', ['7 / 2 is 3.5. But 7 // 2 is 3.', 'And 7 % 2 is 1. Three answers, one division!'], 'wander'),
+    person('abacus-math', 'Mathlete', 25, 8, 13, 'right', ['7 / 2 is 3.5.', 'And 8 / 2 is 4.0, not 4. In Python, / always gives a decimal!'], 'wander'),
   ],
   signs: [
     { x: 9, y: 11, text: ['ABACUS CITY', 'Count on us.'] },
@@ -828,7 +851,7 @@ const towns: Array<{ id: string; name: string; station: [number, number]; mart?:
     { id: 'stringhaven-house2', at: [18, 16], npcs: [person('sh-2', 'Kid', 44, 7, 5, 'left', ['I named my Quotie "Hello World".', 'It\'s the first thing every coder names something.'])] },
   ] },
   { id: 'abacus', name: 'Abacus City', station: [4, 7], mart: [4, 15], tier: 3, houses: [
-    { id: 'abacus-house', at: [17, 16], npcs: [person('ah-1', 'Accountant', 45, 3, 5, 'right', ['I split the bill: 100 // 3 is 33 each.', 'And 100 % 3 is 1 coin left over. I keep that one.'])] },
+    { id: 'abacus-house', at: [17, 16], npcs: [person('ah-1', 'Accountant', 45, 3, 5, 'right', ['I split the bill: 100 / 4 is 25.0 each.', 'Python adds the .0 because / always makes a decimal.'])] },
   ] },
   { id: 'veritas', name: 'Veritas Peak', station: [4, 6], mart: [19, 5], tier: 4, houses: [
     { id: 'veritas-house', at: [4, 16], npcs: [person('vh-1', 'Judge', 46, 3, 5, 'right', ['"cat" == "Cat" is False.', 'In this house, capital letters are taken VERY seriously.'])] },
@@ -871,23 +894,23 @@ const labs: GameMap[] = [
   }),
   lab({
     id: 'abacus-lab', name: 'Abacus City Lab', exit: { map: 'abacus', x: 18, y: 7 }, floor: '#ffe3cc',
-    master: { name: 'Rafa Sum', look: looks.rafa, trainer: { id: 'rafa', title: 'Lab Master', kind: 'master', team: [['modmole', 25], ['plusling', 25], ['divimole', 26]], duels: ['remainder', 'taxi-fare', 'seconds'], bits: 1800, sight: 0, badge: 'sum', reward: { revivechip: 2 },
-      intro: 'Numbers don\'t lie! But they DO divide, multiply and leave remainders. Let\'s calculate!', lose: 'Your math is flawless! Take the Sum Badge.', after: '// gives whole parts, % gives what\'s left. Never forget.' } },
+    master: { name: 'Rafa Sum', look: looks.rafa, trainer: { id: 'rafa', title: 'Lab Master', kind: 'master', team: [['modmole', 25], ['plusling', 25], ['divimole', 26]], duels: ['pizza-party', 'taxi-fare', 'clock-tower'], bits: 1800, sight: 0, badge: 'sum', reward: { revivechip: 2 },
+      intro: 'Numbers don\'t lie! But they DO add, subtract, multiply and divide. Let\'s calculate!', lose: 'Your math is flawless! Take the Sum Badge.', after: '* and / go before + and -. And / always gives a decimal. Never forget.' } },
     trainers: [
-      { name: 'Lab Coder Duda', n: 56, trainer: tr('ab-t1', 'Lab Coder', [['modmole', 23], ['modmole', 23]], 380, 'Double Modmole, double remainders!', 'Divided and conquered.', 'Rafa\'s duels use // and %.', { sight: 3 }) },
+      { name: 'Lab Coder Duda', n: 56, trainer: tr('ab-t1', 'Lab Coder', [['modmole', 23], ['modmole', 23]], 380, 'Double Modmole, double remainders!', 'Divided and conquered.', 'Rafa\'s duels use + - * and /.', { sight: 3 }) },
       { name: 'Lab Coder Leo', n: 57, trainer: tr('ab-t2', 'Lab Coder', [['divimole', 24]], 380, 'My name is Leo too! But I\'m not THE Leo.', 'Definitely not the Leo.', 'Python multiplies before it adds.', { sight: 3 }) },
     ],
     helper: ['Rafa Sum is a calculator with legs.', 'His duels need formulas: + - * / // %.', 'Read the recipe in the prompt carefully.'],
   }),
   lab({
     id: 'veritas-lab', name: 'Veritas Peak Lab', exit: { map: 'veritas', x: 12, y: 6 }, floor: '#d9f7df',
-    master: { name: 'Bruna Bool', look: looks.bruna, trainer: { id: 'bruna', title: 'Lab Master', kind: 'master', team: [['booly', 30], ['truthowl', 31], ['booly', 31]], duels: ['pass-check', 'same-code', 'even-check'], bits: 2200, sight: 0, badge: 'truth', reward: { makercube: 1 },
+    master: { name: 'Bruna Bool', look: looks.bruna, trainer: { id: 'bruna', title: 'Lab Master', kind: 'master', team: [['booly', 30], ['truthowl', 31], ['booly', 31]], duels: ['pass-check', 'same-code', 'perfect-ten'], bits: 2200, sight: 0, badge: 'truth', reward: { makercube: 1 },
       intro: 'Statement: you will win. True or False? Let\'s find out with code.', lose: 'True! You won. The Truth Badge is yours.', after: 'A comparison is a question. Python always answers True or False.' } },
     trainers: [
       { name: 'Lab Coder Clara', n: 58, trainer: tr('ve-t1', 'Lab Coder', [['booly', 28], ['booly', 28]], 450, 'True! I mean, battle!', 'False. I mean, I lost.', 'Bruna\'s duels print comparisons directly: print(x >= 50).', { sight: 3 }) },
       { name: 'Lab Coder Rafael', n: 59, trainer: tr('ve-t2', 'Lab Coder', [['truthowl', 29]], 450, 'My Truthowl never lies!', 'It said I would lose. It was right.', '== compares. Capitals matter in text!', { sight: 3 }) },
     ],
-    helper: ['Bruna Bool speaks only True and False.', 'Her duels: print a comparison, no if/else needed.', 'Even numbers: number % 2 == 0.'],
+    helper: ['Bruna Bool speaks only True and False.', 'Her duels: print a comparison, no if/else needed.', 'One = stores a value. Two == compare. Don\'t mix them up!'],
   }),
   lab({
     id: 'branchwood-lab', name: 'Branchwood Lab', exit: { map: 'branchwood', x: 18, y: 6 }, floor: '#e6dcff',
@@ -902,7 +925,7 @@ const labs: GameMap[] = [
 ]
 
 export const maps: GameMap[] = [
-  vila, home, brianHouse, makerspace, basement, route1, harbor, route2, boxford, route3, stringhaven, route4, lasercave,
+  vila, home, homeUpstairs, brianHouse, makerspace, basement, route1, harbor, route2, boxford, route3, stringhaven, route4, lasercave,
   abacus, route5, veritas, route6, branchwood, hackroad, academy, hall, academyStation, ...interiors, ...labs,
 ]
 
@@ -914,4 +937,4 @@ export function getMap(id: string): GameMap {
   return map
 }
 
-export const START = { map: 'home', x: 8, y: 3, facing: 'down' as const }
+export const START = { map: 'home-2f', x: 2, y: 2, facing: 'right' as const }

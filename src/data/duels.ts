@@ -99,13 +99,13 @@ export const duels: Record<string, CodeDuel> = {
   },
 
   // Lab 4 · Abacus City · MATH
-  'remainder': {
-    id: 'remainder', title: 'The Remainder', inputNames: ['a', 'b'],
-    prompt: 'After dividing a by b, *store only what is left over* in result. The % operator helps.',
-    starter: 'a = int(input())\nb = int(input())\n\nresult = 0  # use %\nprint(result)',
-    solution: 'a = int(input())\nb = int(input())\n\nresult = a % b\nprint(result)',
-    tests: [t(['17', '5'], '2'), t(['22', '4'], '2'), t(['9', '7'], '2'), t(['30', '8'], '6'), t(['19', '6'], '1')],
-    hints: ['% gives the remainder of a division.', 'result = a % b'],
+  'pizza-party': {
+    id: 'pizza-party', title: 'The Pizza Party', inputNames: ['pizzas', 'eaten'],
+    prompt: 'Every pizza has 8 slices. *Store the slices left* in left: all the slices, minus the ones eaten.',
+    starter: 'pizzas = int(input())\neaten = int(input())\n\nleft = 0  # change this\nprint(left)',
+    solution: 'pizzas = int(input())\neaten = int(input())\n\nleft = pizzas * 8 - eaten\nprint(left)',
+    tests: [t(['2', '5'], '11'), t(['1', '8'], '0'), t(['3', '10'], '14'), t(['4', '1'], '31'), t(['5', '0'], '40')],
+    hints: ['All the slices: pizzas * 8.', 'left = pizzas * 8 - eaten'],
   },
   'taxi-fare': {
     id: 'taxi-fare', title: 'The Taxi Fare', inputNames: ['base', 'distance', 'rate'],
@@ -115,13 +115,13 @@ export const duels: Record<string, CodeDuel> = {
     tests: [t(['4', '10', '2'], '24'), t(['5', '8', '3'], '29'), t(['3', '12', '2'], '27'), t(['10', '5', '4'], '30'), t(['7', '0', '9'], '7')],
     hints: ['Python multiplies before adding.', 'fare = base + distance * rate'],
   },
-  'seconds': {
-    id: 'seconds', title: 'The Clock Tower', inputNames: ['seconds'],
-    prompt: 'Split seconds into *whole minutes* (use //) and *seconds left over* (use %). Print each on its own line: {125} gives [2] and [5].',
-    starter: 'seconds = int(input())\n\nminutes = 0  # use //\nleft = 0  # use %\nprint(minutes)\nprint(left)',
-    solution: 'seconds = int(input())\n\nminutes = seconds // 60\nleft = seconds % 60\nprint(minutes)\nprint(left)',
-    tests: [t('125', '2\n5'), t('61', '1\n1'), t('360', '6\n0'), t('59', '0\n59'), t('185', '3\n5')],
-    hints: ['A minute has 60 seconds.', 'minutes = seconds // 60 and left = seconds % 60'],
+  'clock-tower': {
+    id: 'clock-tower', title: 'The Clock Tower', inputNames: ['hours', 'minutes'],
+    prompt: 'Hours arrive, then minutes. *Print the total in minutes*: {2} hours and {5} minutes gives [125].',
+    starter: 'hours = int(input())\nminutes = int(input())\n\ntotal = 0  # change this\nprint(total)',
+    solution: 'hours = int(input())\nminutes = int(input())\n\ntotal = hours * 60 + minutes\nprint(total)',
+    tests: [t(['2', '5'], '125'), t(['1', '1'], '61'), t(['6', '0'], '360'), t(['0', '59'], '59'), t(['3', '5'], '185')],
+    hints: ['An hour has 60 minutes.', 'total = hours * 60 + minutes'],
   },
 
   // Lab 5 · Veritas Peak · LOGIC
@@ -141,13 +141,13 @@ export const duels: Record<string, CodeDuel> = {
     tests: [t(['4729', '4729'], 'True'), t(['4729', '4728'], 'False'), t(['cat', 'Cat'], 'False'), t(['LED', 'LED'], 'True'), t(['on', 'off'], 'False')],
     hints: ['== asks if two values are equal.', 'Capitals matter: cat is not Cat.'],
   },
-  'even-check': {
-    id: 'even-check', title: 'The Even Oracle', inputNames: ['number'],
-    prompt: 'A number arrives. *Print whether it is even*: [True] for even numbers, [False] for odd. Even numbers have {remainder 0 when divided by 2}.',
-    starter: 'number = int(input())\n',
-    solution: 'number = int(input())\nprint(number % 2 == 0)',
-    tests: [t('8', 'True'), t('7', 'False'), t('0', 'True'), t('-3', 'False'), t('100', 'True')],
-    hints: ['number % 2 is the remainder.', 'print(number % 2 == 0)'],
+  'perfect-ten': {
+    id: 'perfect-ten', title: 'The Perfect Ten', inputNames: ['a', 'b'],
+    prompt: 'Two numbers arrive. *Print whether they add up to exactly 10*: [True] or [False].',
+    starter: 'a = int(input())\nb = int(input())\n',
+    solution: 'a = int(input())\nb = int(input())\nprint(a + b == 10)',
+    tests: [t(['4', '6'], 'True'), t(['5', '6'], 'False'), t(['10', '0'], 'True'), t(['9', '2'], 'False'), t(['7', '3'], 'True')],
+    hints: ['Add first, then compare with ==.', 'print(a + b == 10)'],
   },
 
   // Lab 6 · Branchwood · BRANCH

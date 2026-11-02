@@ -9,6 +9,9 @@ import { looks } from '../world/looks'
 import type { TrainerDef } from '../world/types'
 import { addPyxie, giveItem, hasFlag, healTeam, itemCount, markSeen, setFlag, takeItem } from './state'
 
+/** What the big picture card shows: an item with its icon, or a place with its aerial view and the valley map. */
+export type ShowSpec = { kind: 'item'; item: string; count?: number } | { kind: 'place'; map: string; building?: string; note?: string }
+
 export interface ScriptUI {
   say: (lines: string | string[], speaker?: string) => Promise<void>
   choose: (prompt: string, options: string[], speaker?: string) => Promise<number>
@@ -20,6 +23,8 @@ export interface ScriptUI {
   duel: (duelId: string, title: string) => Promise<boolean>
   sfx: (name: string) => void
   flash: () => Promise<void>
+  /** A big picture of something new (an item, or a place on the map), for students who need to see it. */
+  show?: (spec: ShowSpec) => Promise<void>
   /** The big look at a pyxie. With choose, it resolves true when the player picks it. */
   inspect?: (species: string, options?: { choose?: string; banner?: string }) => Promise<boolean>
 }
@@ -67,8 +72,10 @@ function rivalDef(id: string, stage: 1 | 2 | 3 | 4, save: SaveState, intro: stri
 }
 
 async function gift(ctx: ScriptContext, item: string, count = 1) {
-  ctx.set((save) => giveItem(save, item, count))
+  ctx.set((save) => setFlag(giveItem(save, item, count), `seen-item:${item}`))
   ctx.ui.sfx('item')
+  // Every gift is shown big first: students learn what a Codex or a Bytecube looks like.
+  await ctx.ui.show?.({ kind: 'item', item, count })
   await ctx.ui.say(`${name(ctx)} got ${itemName(item, count)}!`)
 }
 
@@ -82,6 +89,7 @@ export const scripts: Record<string, Script> = {
   mom: async (ctx) => {
     if (!hasFlag(ctx.get(), 'got_starter')) {
       await ctx.ui.say([`Good morning, ${name(ctx)}!`, 'Leo Maker called. He wants to see you at the Makerspace.', 'It\'s the building with the orange roof. Don\'t forget your goggles!'], 'Mom')
+      await ctx.ui.show?.({ kind: 'place', map: 'vila', building: 'makerspace', note: 'The Makerspace: the orange roof in Vila Maker.' })
       return
     }
     await ctx.ui.say(['You look tired! Let me give your pyxies a rest.'], 'Mom')
@@ -89,6 +97,17 @@ export const scripts: Record<string, Script> = {
     ctx.ui.sfx('heal')
     await ctx.ui.say(['There! All charged up. Be careful out there, OK?'], 'Mom')
   },
+
+  grandma: async (ctx) => {
+    const who = 'Grandma'
+    if (!hasFlag(ctx.get(), 'got_starter')) {
+      await ctx.ui.say(['Still here? Leo Maker is waiting for you!', 'Down the stairs, out the door, then find the building with the orange roof.'], who)
+      await ctx.ui.show?.({ kind: 'place', map: 'vila', building: 'makerspace', note: 'The Makerspace: the orange roof in Vila Maker.' })
+      return
+    }
+    await ctx.ui.say(['Look at you, a real maker with a real pyxie!', 'Leo Maker came for dinner once. I served fish.', 'He left through the window. Poor thing.'], who)
+  },
+  'room-pc': async (ctx) => ctx.ui.say(['Your computer. The wallpaper is a pixel-art pyxie you drew yourself.', 'A sticky note on the screen: "print(\'Good morning!\')"']),
 
   tv: async (ctx) => ctx.ui.say(['A cooking show. The chef is 3D printing a pizza.', 'It looks… crunchy.']),
   'home-shelf': async (ctx) => ctx.ui.say(['Your bookshelf. "Python for Makers", "Cardboard Engineering" and a comic about robots.']),
@@ -128,6 +147,7 @@ export const scripts: Record<string, Script> = {
     await gift(ctx, 'bytecube', 5)
     await gift(ctx, 'patch', 3)
     await ctx.ui.say(['Six Lab Masters guard the valley. Each one tests a Python idea with REAL code.', 'Beat all six, and you can enter the Grand Hackathon at the Lourenço Castanho Academy!', 'But Masters only accept trainers with enough Trainer XP. Battle, catch, and learn.', 'Echo Harbor is north, past Route 1. Off you go!'], 'Leo Maker')
+    await ctx.ui.show?.({ kind: 'place', map: 'harbor', note: 'Echo Harbor: go north from Vila Maker, through Route 1.' })
     await ctx.ui.say(['See you at the Hackathon, slowpoke! I\'ll be the champion by then!'], 'Brian')
   },
 

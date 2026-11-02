@@ -26,7 +26,7 @@ const B = ['echo', 'box', 'quote', 'sum', 'truth', 'fork']
 const base = ['intro_done', 'lab_intro', 'got_starter', 'rival1']
 
 export const chapters: Chapter[] = [
-  { id: 'start', label: 'New adventure', note: 'Wake up at home. Leo Maker is waiting.', map: 'home', x: 8, y: 3, level: 0, badges: [], flags: [], defeated: [], xp: 0 },
+  { id: 'start', label: 'New adventure', note: 'Wake up at home. Leo Maker is waiting.', map: 'home-2f', x: 2, y: 2, level: 0, badges: [], flags: [], defeated: [], xp: 0 },
   { id: 'starter', label: 'Choose a starter', note: 'The Makerspace, right before the three pods.', map: 'makerspace', x: 7, y: 5, level: 0, badges: [], flags: ['intro_done', 'lab_intro'], defeated: [], xp: 0 },
   { id: 'route1', label: 'Route 1', note: 'Starter in hand, first wild pyxies.', map: 'route1', x: 9, y: 25, level: 6, badges: [], flags: base, defeated: [], xp: 30 },
   { id: 'echo', label: 'Lab 1 · Marina Echo (print)', note: 'Inside Echo Harbor Lab, gate already open.', map: 'harbor-lab', x: 6, y: 11, level: 11, badges: [], flags: base, defeated: ['r1-tom', 'r1-bia'], xp: labGates.echo },

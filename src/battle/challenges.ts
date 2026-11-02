@@ -222,12 +222,12 @@ function mathFill(rng: Rng, tier: Tier): ChoiceChallenge {
   let a = rng.int(4, 12)
   let b = rng.int(2, 4)
   while (a % b !== 0 || a / b === a - b || a * b === a + b) { a = rng.int(4, 12); b = rng.int(2, 4) }
-  const ops = tier === 1 ? ['+', '-', '*', '/'] : ['+', '-', '*', '//', '%']
+  const ops = ['+', '-', '*', '/']
   const op = rng.pick(ops)
   const target = opResult(a, op, b)
   const code = [`print(${a} ___ ${b})`]
   const valid = ops.filter((item) => opResult(a, item, b) !== target)
-  return { kind: 'fill', concept: 'math', tier, code, prompt: `Which operator makes the screen show ${target}?`, explain: '/ always gives a decimal like 4.0. // drops the decimals. % gives what is left over.', ...choice(rng, op, valid, () => '**') }
+  return { kind: 'fill', concept: 'math', tier, code, prompt: `Which operator makes the screen show ${target}?`, explain: '+ adds, - subtracts, * multiplies and / divides. / always gives a decimal like 4.0.', ...choice(rng, op, valid, () => '**') }
 }
 
 function mathPredict(rng: Rng, tier: Tier): ChoiceChallenge {
@@ -235,8 +235,8 @@ function mathPredict(rng: Rng, tier: Tier): ChoiceChallenge {
   const b = rng.int(2, 6)
   const c = rng.int(2, 5)
   const expr = tier === 2
-    ? rng.pick([`${a} + ${b} * ${c}`, `${a * b} // ${b}`, `${a * b + 1} % ${b}`, `${a * 2} / 2`, `(${a} + ${b}) * ${c}`])
-    : rng.pick([`(${a} + ${b}) * ${c} - ${c * 2} // 2`, `${a} + ${b} * ${c} - ${a} % 2`, `${a * c} // ${c} + ${b} * 2`, `(${a} - ${b}) * (${c} + 1)`])
+    ? rng.pick([`${a} + ${b} * ${c}`, `${a * b} / ${b}`, `${a * 2} / 2`, `(${a} + ${b}) * ${c}`, `${a} * ${b} - ${c}`])
+    : rng.pick([`(${a} + ${b}) * ${c} - ${c * 2} / 2`, `${a} + ${b} * ${c} - ${a}`, `${a * c} / ${c} + ${b} * 2`, `(${a} - ${b}) * (${c} + 1)`])
   const code = [`print(${expr})`]
   const correct = screen(code)
   const flat = expr.replace(/[()]/g, '')
@@ -246,21 +246,24 @@ function mathPredict(rng: Rng, tier: Tier): ChoiceChallenge {
     for (let i = 1; i < tokens.length; i += 2) {
       const n = Number(tokens[i + 1])
       const op = tokens[i]
-      value = op === '+' ? value + n : op === '-' ? value - n : op === '*' ? value * n : op === '//' ? Math.floor(value / n) : op === '%' ? value % n : value / n
+      value = op === '+' ? value + n : op === '-' ? value - n : op === '*' ? value * n : value / n
     }
-    return String(value)
+    return like(value)
   })()
-  const distractors = [leftToRight, produces([`print(${flat})`]), String(Number(correct) + 1), String(Number(correct) - 2)].filter((item) => !item.startsWith('!') && item !== 'NaN')
-  return { kind: 'predict', concept: 'math', tier, code, prompt: 'Calculate like Python. What is printed?', explain: 'Python does ( ) first, then * / // %, then + and -. / always gives a decimal.', ...choice(rng, correct, distractors, nearNumber(rng, Number.parseFloat(correct) || 0)) }
+  // Wrong answers wear the same form as the right one, so 34.0 never gives itself away next to 34.
+  function like(n: number): string { return correct.includes('.') && Number.isInteger(n) ? n.toFixed(1) : String(n) }
+  const distractors = [leftToRight, produces([`print(${flat})`]), like(Number(correct) + 1), like(Number(correct) - 2)].filter((item) => !item.startsWith('!') && item !== 'NaN')
+  return { kind: 'predict', concept: 'math', tier, code, prompt: 'Calculate like Python. What is printed?', explain: 'Python does ( ) first, then * and /, then + and -. / always gives a decimal.', ...choice(rng, correct, distractors, nearNumber(rng, Number.parseFloat(correct) || 0)) }
 }
 
 function mathTrace(rng: Rng): ChoiceChallenge {
-  const n = rng.int(11, 39)
-  const d = rng.int(3, 7)
-  const code = [`candy = ${n}`, `kids = ${d}`, 'each = candy // kids', 'left = candy % kids']
-  const focus = rng.pick(['each', 'left'])
+  const each = rng.int(3, 8)
+  const d = rng.int(2, 6)
+  const code = [`candy = ${each * d}`, `kids = ${d}`, 'each = candy / kids', 'bonus = each + 2']
+  const focus = rng.pick(['each', 'bonus'])
   const correct = screen([...code, `print(${focus})`])
-  return { kind: 'trace', concept: 'math', tier: 2, code, focus, prompt: `${n} candies shared by ${d} kids. What is in ${focus}?`, explain: '// says how many each kid gets. % says how many are left over.', ...choice(rng, correct, [String(Math.floor(n / d)), String(n % d), String(n - d), (n / d).toFixed(1)], nearNumber(rng, Number(correct))) }
+  const value = Number(correct)
+  return { kind: 'trace', concept: 'math', tier: 2, code, focus, prompt: `${each * d} candies shared by ${d} kids. What is in ${focus}?`, explain: '/ always gives a decimal: even an exact share like 12 / 3 is 4.0.', ...choice(rng, correct, [String(value), (value + 1).toFixed(1), (value - 2).toFixed(1), (each * d - d).toFixed(1)], () => (value + rng.int(3, 6)).toFixed(1)) }
 }
 
 // ------------------------------------------------------------------ LOGIC

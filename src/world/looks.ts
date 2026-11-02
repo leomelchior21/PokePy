@@ -22,6 +22,7 @@ export const looks = {
   leoMaker: L('#9a9aa6', '#f1b98c', '#f28c28', '#3a3f55', 'short', 'apron'),
   brian: L('#6b3e26', '#ffdcbf', '#d93a3a', '#24262e', 'spiky', 'goggles'),
   mom: L('#3b2a20', '#f1b98c', '#7fbf6a', '#4a6fa5', 'bun'),
+  grandma: L('#e4e0ea', '#f1b98c', '#c4568a', '#5a4a6a', 'bun', 'glasses'),
   segfault: L('#f1efe8', '#d8c8e8', '#5b2a86', '#1d1530', 'long', 'goggles'),
   grunt: L('#1d1530', '#c98b5e', '#3b2457', '#1d1530', 'cap', undefined, '#7a2fd0'),
   nurse: L('#e66fa8', '#ffdcbf', '#ffffff', '#e66fa8', 'bun'),

@@ -8,7 +8,7 @@ import type { GameMap, ItemDef, NpcDef, SignDef, Thing, Trigger } from '../world
 import { buildingAt, cutFlag, delta, facingToward, isGrass, itemFlag, mapHeight, mapWidth, npcsIn, opposite, spottedBy, step, thingsIn, tileAt, visible, walkable, warpAt, type Arrival, type NpcPositions } from '../world/world'
 import { objectCanvas, personCanvas, pyxieCanvas } from '../engine/art'
 import { Ambient, type View } from '../engine/ambient'
-import { makeCanvas } from '../engine/pixels'
+import { hasCanvas, makeCanvas } from '../engine/pixels'
 import { boulderCanvas, bushCanvas, drawFence, TREE_SIZE, tallGrassCanvas, treeCanvas, treeKindFor } from '../engine/props'
 import { buildGround, hash, isOutdoor } from '../engine/terrain'
 import { drawScreenTile, drawSunbeams } from '../engine/interior'
@@ -89,6 +89,8 @@ export class WorldRuntime {
   private lastRustle = 0
   private frameDt = 16
   private buffer: HTMLCanvasElement | null = null
+  private exitCache: { id: string; list: Array<{ x: number; y: number; dir: Direction }> } | null = null
+  private exitArt: HTMLCanvasElement | null = null
 
   constructor(hooks: RuntimeHooks) {
     this.hooks = hooks
@@ -750,6 +752,7 @@ export class WorldRuntime {
     drawables.sort((a, b) => a.y - b.y).forEach((item) => item.draw())
     if (outdoor) this.ambient.drawClouds(ctx)
     this.ambient.drawAir(ctx)
+    this.drawExits(ctx)
 
     if (this.bubble && this.bubble.until > this.time) {
       const npc = this.map.npcs?.find((item) => item.id === this.bubble?.npc)
@@ -778,6 +781,55 @@ export class WorldRuntime {
     if (this.fade > 0) {
       top.fillStyle = `rgba(11,9,18,${this.fade})`
       top.fillRect(0, 0, width, height)
+    }
+  }
+
+  /** Every way out of the map along its edges, worked out once per map: the middle of each open stretch. */
+  private exitsFor(): Array<{ x: number; y: number; dir: Direction }> {
+    if (this.exitCache?.id === this.map.id) return this.exitCache.list
+    const list: Array<{ x: number; y: number; dir: Direction }> = []
+    const w = mapWidth(this.map)
+    const h = mapHeight(this.map)
+    const flags = this.flags()
+    for (const edge of this.map.edges ?? []) {
+      const across = edge.side === 'up' || edge.side === 'down'
+      let run: number[] = []
+      const flush = () => {
+        if (!run.length) return
+        const mid = (run[0] + run[run.length - 1]) / 2
+        const x = across ? mid : edge.side === 'left' ? 0 : w - 1
+        const y = across ? (edge.side === 'up' ? 0 : h - 1) : mid
+        const [dx, dy] = unit[edge.side]
+        // One tile in from the edge, so the arrow sits on the path and not under the trees.
+        list.push({ x: x * 16 + 8 - dx * 14, y: y * 16 + 8 - dy * 14, dir: edge.side })
+        run = []
+      }
+      for (let i = 0; i < (across ? w : h); i += 1) {
+        const x = across ? i : edge.side === 'left' ? 0 : w - 1
+        const y = across ? (edge.side === 'up' ? 0 : h - 1) : i
+        if (walkable(this.map, x, y, flags)) run.push(i)
+        else flush()
+      }
+      flush()
+    }
+    this.exitCache = { id: this.map.id, list }
+    return list
+  }
+
+  /** Bobbing arrows at every way out, so students can see where the path continues. */
+  private drawExits(ctx: CanvasRenderingContext2D) {
+    if (!this.exitArt) this.exitArt = exitArrow()
+    const art = this.exitArt
+    if (!art) return
+    const bob = Math.round((Math.sin(this.time / 200) + 1) * 1.5)
+    const angle: Record<Direction, number> = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 }
+    for (const exit of this.exitsFor()) {
+      const [dx, dy] = unit[exit.dir]
+      ctx.save()
+      ctx.translate(Math.round(exit.x + dx * bob), Math.round(exit.y + dy * bob))
+      ctx.rotate(angle[exit.dir])
+      ctx.drawImage(art, -6, -6)
+      ctx.restore()
     }
   }
 
@@ -893,4 +945,17 @@ function drawBubble(ctx: CanvasRenderingContext2D, cx: number, by: number, text:
   if (text === '!') { ctx.fillRect(x + 5, y + 2, 1, 4); ctx.fillRect(x + 5, y + 7, 1, 1) } else {
     ctx.fillRect(x + 4, y + 2, 3, 1); ctx.fillRect(x + 3, y + 3, 1, 5); ctx.fillRect(x + 7, y + 3, 1, 5); ctx.fillRect(x + 4, y + 5, 3, 1)
   }
+}
+
+/** A chunky yellow arrow pointing up, 13 pixels square; it is rotated for the other directions. */
+function exitArrow(): HTMLCanvasElement | null {
+  if (!hasCanvas()) return null
+  const shape = ['......#......', '.....###.....', '....#####....', '...#######...', '..#########..', '.###########.', '....#####....', '....#####....', '....#####....', '....#####....']
+  const canvas = makeCanvas(13, 13)
+  const ctx = canvas.getContext('2d')!
+  const on = (x: number, y: number) => shape[y]?.[x] === '#'
+  ctx.fillStyle = '#1b1626'
+  for (let y = -1; y <= shape.length; y += 1) for (let x = -1; x <= 13; x += 1) if (on(x, y) || on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1)) ctx.fillRect(x, y + 1, 1, 1)
+  for (let y = 0; y < shape.length; y += 1) for (let x = 0; x < 13; x += 1) if (on(x, y)) { ctx.fillStyle = y < 3 || !on(x, y - 1) ? '#fff3a8' : '#ffd23f'; ctx.fillRect(x, y + 1, 1, 1) }
+  return canvas
 }

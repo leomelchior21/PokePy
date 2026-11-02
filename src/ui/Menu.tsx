@@ -11,9 +11,9 @@ import { moveToFront, replacePyxie, takeItem } from '../game/state'
 import { saveCloud } from '../save/cloud'
 import type { OwnedPyxie, SaveState } from '../types'
 import { avatarLook } from '../world/looks'
-import { mapById } from '../world/maps'
 import { BadgeIcon } from './Badge'
 import { PyxieInspector } from './PyxieInspector'
+import { ValleyMap } from './ValleyMap'
 import { Bar, ConceptTag, ItemIcon, PersonImg, PyxieImg } from './Sprite'
 
 type Tab = 'team' | 'codex' | 'bag' | 'card' | 'map' | 'options'
@@ -180,37 +180,8 @@ function CardTab({ save }: { save: SaveState }) {
   </div>
 }
 
-const mapNodes: Array<{ id: string; x: number; y: number; town: boolean }> = [
-  { id: 'academy', x: 7, y: 0, town: true }, { id: 'hackroad', x: 7, y: 1, town: false }, { id: 'branchwood', x: 7, y: 2, town: true },
-  { id: 'route6', x: 5, y: 2, town: false }, { id: 'veritas', x: 3, y: 2, town: true }, { id: 'route5', x: 3, y: 3, town: false },
-  { id: 'abacus', x: 3, y: 4, town: true }, { id: 'route4', x: 5, y: 4, town: false }, { id: 'stringhaven', x: 7, y: 4, town: true },
-  { id: 'route3', x: 7, y: 5, town: false }, { id: 'boxford', x: 7, y: 6, town: true }, { id: 'route2', x: 5, y: 6, town: false },
-  { id: 'harbor', x: 3, y: 6, town: true }, { id: 'route1', x: 3, y: 7, town: false }, { id: 'vila', x: 3, y: 8, town: true },
-]
-
 function MapTab({ save }: { save: SaveState }) {
-  const here = mapNodes.find((node) => node.id === save.map) ? save.map
-    : Object.values(mapById).find((map) => map.warps?.some((w) => w.to === save.map) || map.buildings?.some((b) => b.to === save.map))?.id ?? save.map
-  const outer = mapNodes.find((node) => node.id === here) ? here : mapNodes.find((node) => mapById[node.id].buildings?.some((b) => b.to === here))?.id
-  return <div className="valley">
-    <svg viewBox="0 0 10 9.4" className="valley__svg" role="img" aria-label="Map of the Castanho Valley">
-      <rect x="0" y="0" width="10" height="9.4" fill="#5fae55" />
-      <path d="M0 0 h10 v0.6 h-10 Z" fill="#3f7f3a" />
-      <path d="M0 6.2 h2.4 v3.2 h-2.4 Z" fill="#4aa3df" />
-      <polyline points={mapNodes.map((node) => `${node.x + 1},${node.y + 0.5}`).join(' ')} fill="none" stroke="#f1dc9a" strokeWidth="0.22" strokeLinejoin="round" />
-      <polyline points={mapNodes.map((node) => `${node.x + 1},${node.y + 0.5}`).join(' ')} fill="none" stroke="#c9a35a" strokeWidth="0.05" strokeDasharray="0.15 0.15" />
-      {mapNodes.map((node) => {
-        const visited = save.flags.includes(`visited:${node.id}`) || node.id === 'vila'
-        return <g key={node.id} transform={`translate(${node.x + 1} ${node.y + 0.5})`} opacity={visited ? 1 : 0.35}>
-          {node.town
-            ? <rect x="-0.38" y="-0.38" width="0.76" height="0.76" rx="0.1" fill={node.id === 'academy' ? '#6a2fb8' : '#e8483f'} stroke={node.id === 'academy' ? '#ffd23f' : '#fff'} strokeWidth="0.07" />
-            : <circle r="0.2" fill="#f1dc9a" stroke="#8a6a4a" strokeWidth="0.05" />}
-          {outer === node.id && <circle r="0.55" fill="none" stroke="#ffd23f" strokeWidth="0.09" className="valley__here" />}
-        </g>
-      })}
-    </svg>
-    <ul className="valley__legend">{mapNodes.filter((node) => node.town).map((node) => <li key={node.id} className={outer === node.id ? 'is-here' : ''}>{mapById[node.id].name}{outer === node.id && ' ◀ YOU'}</li>)}</ul>
-  </div>
+  return <ValleyMap save={save} />
 }
 
 function OptionsTab({ save, change, onQuit, onSave }: { save: SaveState; change: (u: (s: SaveState) => SaveState) => void; onQuit: () => void; onSave: () => void }) {
