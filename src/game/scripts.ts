@@ -20,6 +20,8 @@ export interface ScriptUI {
   duel: (duelId: string, title: string) => Promise<boolean>
   sfx: (name: string) => void
   flash: () => Promise<void>
+  /** The big look at a pyxie. With choose, it resolves true when the player picks it. */
+  inspect?: (species: string, options?: { choose?: string; banner?: string }) => Promise<boolean>
 }
 
 export interface ScriptContext {
@@ -103,9 +105,11 @@ export const scripts: Record<string, Script> = {
     const species = getSpecies(ctx.arg ?? 'sparkit')
     // Leo Maker always introduces the pods first, however you got to the workbench.
     if (!hasFlag(ctx.get(), 'lab_intro')) await scripts['lab-intro'](ctx)
-    await ctx.ui.say([`It's ${species.name}, the ${species.concept.toUpperCase()} pyxie.`, species.entry])
-    const pick = await ctx.ui.choose(`Choose ${species.name}?`, ['Yes!', 'Not yet'])
-    if (pick !== 0) return
+    await ctx.ui.say([`It's ${species.name}, the ${species.concept.toUpperCase()} pyxie. Take a good look!`])
+    const chosen = ctx.ui.inspect
+      ? await ctx.ui.inspect(species.id, { choose: `CHOOSE ${species.name.toUpperCase()}!`, banner: 'CHOOSE YOUR PARTNER' })
+      : (await ctx.ui.choose(`Choose ${species.name}?`, ['Yes!', 'Not yet'])) === 0
+    if (!chosen) return
     const rng = ctx.rng
     const mine = createPyxie(species.id, 5, rng, 'makerspace')
     ctx.set((save) => setFlag(setFlag(addPyxie(markSeen(save, species.id), { ...mine, shiny: false }).save, 'got_starter'), `starter:${species.id}`))

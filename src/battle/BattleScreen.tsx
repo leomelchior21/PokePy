@@ -9,7 +9,10 @@ import { addPyxie, giveItem, markSeen, replacePyxie, takeItem } from '../game/st
 import { randomRng } from '../lib/rng'
 import type { OwnedPyxie, SaveState } from '../types'
 import { Bar, ConceptTag, PyxieImg } from '../ui/Sprite'
+import { PyxieInspector } from '../ui/PyxieInspector'
 import { createChallenge, createDodge, type Challenge } from './challenges'
+import { isMini } from './minigames'
+import { hasCanvas } from '../engine/pixels'
 import { BattleBackdrop } from './BattleBackdrop'
 import { ChallengeView, type ChallengeResult } from './ChallengeView'
 import { DuelPanel, runDuel, type DuelRun } from './CodeDuel'
@@ -27,6 +30,7 @@ type View =
   | { kind: 'bag' }
   | { kind: 'duel'; duelId: string; enemyIndex: number }
   | { kind: 'evolve'; from: string; to: string; stage: number }
+  | { kind: 'inspect'; species: string; shiny: boolean; banner: string }
 
 interface Popup { id: number; side: 'enemy' | 'player'; text: string; tone: 'dmg' | 'good' | 'info' }
 
@@ -224,7 +228,7 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
       await say(`${displayName(me)} used ${move.name}!`)
       void flashAnim('player', 'attack', 300)
       await shoot('player', move.concept)
-      const hit = moveDamage(me, enemy(), moveId, streak.current, rng)
+      const hit = moveDamage(me, enemy(), moveId, streak.current, rng, result.aided === 'duck' ? 0 : result.score ?? 0)
       const foe = enemy()
       enemies.current[enemyIndex.current] = { ...foe, hp: Math.max(0, foe.hp - hit.damage) }
       audio.sfx(hit.multiplier > 1 ? 'super' : 'hit')
@@ -274,8 +278,10 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
       burst('enemy', getSpecies(foe.species).concept, 36, 'confetti')
       await shout('GOTCHA!', 'catch', `${getSpecies(foe.species).name} joins you`, 1600)
       await say(`Gotcha! ${getSpecies(foe.species).name} was caught!`)
+      const firstTime = !get().caught.includes(foe.species)
       const { save: next, where } = addPyxie(get(), { ...foe, caughtAt: get().map })
       set(() => ({ ...next, stats: { ...next.stats, catches: next.stats.catches + 1 } }))
+      await ask<void>({ kind: 'inspect', species: foe.species, shiny: foe.shiny, banner: firstTime ? 'NEW PYXIE!' : 'GOTCHA!' })
       if (where === 'box') await say('Your team is full, so it was sent to the Cloud Box.')
       return 'caught'
     }
@@ -449,7 +455,8 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
   const xpFrom = Math.floor(me.level ** 3 * 0.6)
   const xpTo = Math.floor((me.level + 1) ** 3 * 0.6)
 
-  return <div className={`battle battle--${bg} ${intro ? 'is-intro' : ''} ${anim.flash ? `flash-${anim.flash}` : ''} ${mood ? `is-${mood}` : ''}`}>
+  const mini = view.kind === 'challenge' && isMini(view.challenge.kind) && hasCanvas()
+  return <div className={`battle battle--${bg} ${intro ? 'is-intro' : ''} ${anim.flash ? `flash-${anim.flash}` : ''} ${mood ? `is-${mood}` : ''} ${mini ? 'battle--mini' : ''}`}>
     <div className="battle__stage">
       {banner && <div key={banner.id} className={`banner banner--${banner.tone}`} aria-live="assertive"><b>{banner.text}</b>{banner.sub && <small>{banner.sub}</small>}</div>}
       {mood === 'victory' && <div className="rays" aria-hidden="true" />}
@@ -508,22 +515,13 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
           <button className="btn" onClick={() => answer({ type: 'run' })}>🏃 RUN</button>
         </div>
       </div>}
-      {view.kind === 'challenge' && <ChallengeView key={view.id} challenge={view.challenge} title={view.title} quick={view.quick}
+      {view.kind === 'challenge' && <ChallengeView key={view.id} challenge={view.challenge} title={view.title} quick={view.quick} hero={{ species: me.species, shiny: me.shiny }}
         lenses={save.bag.hintlens ?? 0} ducks={save.bag.debugduck ?? 0}
         onUseItem={(item) => set((s) => takeItem(s, item))}
         onDone={(result) => answer(result)} />}
-      {view.kind === 'switch' && <div className="battle__list">
-        <p className="battle__ask">{view.revive ? 'Reboot which pyxie?' : view.forced ? 'Choose the next pyxie!' : 'Switch to which pyxie?'}</p>
-        <div className="team-pick">{save.team.map((p) => {
-          const st = statsFor(p.species, p.level)
-          const fainted = isFainted(p)
-          const enabled = view.revive ? fainted : !fainted && p.uid !== activeUid.current
-          return <button key={p.uid} disabled={!enabled} className="team-pick__item" onClick={() => answer(p.uid)}>
-            <PyxieImg species={p.species} shiny={p.shiny} size={48} /><span><b>{displayName(p)}</b><small>Lv{p.level} · {p.hp}/{st.maxHp} HP</small><Bar value={p.hp} max={st.maxHp} /></span>
-          </button>
-        })}</div>
-        {!view.forced && <button className="btn" onClick={() => answer(null)}>BACK</button>}
-      </div>}
+      {view.kind === 'switch' && <SwitchPicker team={save.team} activeUid={activeUid.current} forced={view.forced} revive={Boolean(view.revive)} onPick={(uid) => answer(uid)} />}
+      {view.kind === 'inspect' && <PyxieInspector species={view.species} shiny={view.shiny} pyxie={get().team.find((p) => p.species === view.species) ?? get().box.find((p) => p.species === view.species)} banner={view.banner}
+        onClose={() => answer(undefined)} actions={[{ label: 'AWESOME!', primary: true, onClick: () => answer(undefined) }]} />}
       {view.kind === 'bag' && <div className="battle__list">
         <p className="battle__ask">Use which item?</p>
         <div className="bag-pick">{Object.entries(save.bag).filter(([id]) => ['heal', 'revive', 'cube'].includes(items[id]?.use)).map(([id, count]) => (
@@ -538,5 +536,37 @@ export function BattleScreen({ spec, get, set, onEnd }: Props) {
         <div className={`evolve__mon ${view.stage % 2 ? 'is-new' : ''}`}><PyxieImg species={view.stage % 2 ? view.to : view.from} size={140} /></div>
       </div>}
     </div>
+  </div>
+}
+
+/** Picking a pyxie mid-battle: tap one to see it big, with its stats, then send it out. */
+function SwitchPicker({ team, activeUid, forced, revive, onPick }: { team: OwnedPyxie[]; activeUid: string; forced: boolean; revive: boolean; onPick: (uid: string | null) => void }) {
+  const usable = (p: OwnedPyxie) => (revive ? isFainted(p) : !isFainted(p) && p.uid !== activeUid)
+  const [focus, setFocus] = useState(() => team.find(usable)?.uid ?? team[0]?.uid)
+  const chosen = team.find((p) => p.uid === focus) ?? team[0]
+  const species = getSpecies(chosen.species)
+  const st = statsFor(chosen.species, chosen.level)
+  const info = concepts[species.concept]
+  return <div className="battle__list switch">
+    <p className="battle__ask">{revive ? 'Reboot which pyxie?' : forced ? 'Choose the next pyxie!' : 'Switch to which pyxie?'}</p>
+    <div className="switch__body">
+      <div className="team-pick">{team.map((p) => {
+        const stats = statsFor(p.species, p.level)
+        return <button key={p.uid} className={`team-pick__item ${focus === p.uid ? 'is-focus' : ''} ${usable(p) ? '' : 'is-off'}`} onClick={() => { audio.sfx('blip'); setFocus(p.uid) }}>
+          <PyxieImg species={p.species} shiny={p.shiny} size={48} /><span><b>{displayName(p)}</b><small>Lv{p.level} · {p.hp}/{stats.maxHp} HP</small><Bar value={p.hp} max={stats.maxHp} /></span>
+        </button>
+      })}</div>
+      <div className="switch__preview" style={{ '--c': info.color } as CSSProperties}>
+        <div className="switch__art"><PyxieImg species={chosen.species} shiny={chosen.shiny} size={168} className={isFainted(chosen) ? 'is-fainted' : ''} /></div>
+        <div className="switch__facts">
+          <b>{displayName(chosen)} <small>Lv{chosen.level}</small></b>
+          <ConceptTag concept={species.concept} small />
+          <small>ATK {st.atk} · DEF {st.def} · SPD {st.spd}</small>
+          <small>{chosen.moves.map((id) => getMove(id).name).join(' · ')}</small>
+        </div>
+        <button className="btn btn--primary" disabled={!usable(chosen)} onClick={() => onPick(chosen.uid)}>{revive ? `REBOOT ${displayName(chosen).toUpperCase()}` : `GO, ${displayName(chosen).toUpperCase()}!`}</button>
+      </div>
+    </div>
+    {!forced && <button className="btn" onClick={() => onPick(null)}>BACK</button>}
   </div>
 }

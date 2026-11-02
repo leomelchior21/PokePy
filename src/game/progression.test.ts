@@ -3,6 +3,7 @@
 // in a late save, and that the adventure lasts about three hours.
 import { describe, expect, it } from 'vitest'
 import { createPyxie, enemyDamage, gainXp, healPyxie, isFainted, moveDamage, pickEnemyMove, statsFor, trainerXpReward, xpReward, catchChance, wildLevel } from '../battle/engine'
+import { isMini } from '../battle/minigames'
 import { effectiveness } from '../data/concepts'
 import { getMove } from '../data/moves'
 import { labGates } from '../data/progression'
@@ -13,7 +14,7 @@ import { getMap } from '../world/maps'
 import { addBadge, addPyxie, newSave, repairSave } from './state'
 import { rivalTeam } from './scripts'
 
-const challengeSeconds: Record<string, number> = { predict: 22, trace: 22, fill: 20, truefalse: 9, build: 38, fix: 42, order: 40, path: 16 }
+const challengeSeconds: Record<string, number> = { predict: 22, trace: 22, fill: 20, truefalse: 9, build: 38, fix: 42, order: 40, path: 16, catch: 28, sling: 22, flappy: 34, jump: 38, match: 55, blocks: 55 }
 
 interface Clock { seconds: number; battles: number; lost: number; turns?: number; foes?: number }
 
@@ -40,7 +41,9 @@ function battle(save: SaveState, enemies: OwnedPyxie[], trainer: boolean, accura
       clock.seconds += challengeSeconds[getMove(moveId).kind] + 5
       if (rng.chance(accuracy)) {
         streak += 1
-        foe = { ...foe, hp: Math.max(0, foe.hp - moveDamage(me, foe, moveId, streak, rng).damage) }
+        // A mini-game played fairly well (about 80%) adds its skill bonus.
+        const skill = isMini(getMove(moveId).kind) ? 0.8 : 0
+        foe = { ...foe, hp: Math.max(0, foe.hp - moveDamage(me, foe, moveId, streak, rng, skill).damage) }
       } else streak = 0
       if (isFainted(foe)) break
       clock.seconds += 11

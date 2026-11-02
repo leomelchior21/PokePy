@@ -1,196 +1,140 @@
-// Every sprite in the game, drawn as text. Pyxies are 16×16 and mirrored from their left half.
+// Every sprite in the game. Pyxies are vector designs rasterized to pixel art (creatures.ts);
+// people, objects and icons are drawn as text.
 import type { Direction } from '../types'
 import type { Look } from '../world/types'
+import { creatures } from './creatures'
 import { dataUrl, gridFrom, outline, renderGrid, shade, type Palette } from './pixels'
+import { rasterize } from './raster'
 
-interface PyxieArt { rows: string[]; palette: Palette; overrides?: Array<[x: number, y: number, c: string]> }
+const golds: Record<string, string> = { b: '#ffe36e', d: '#d99a1a', l: '#fff6c4', c: '#ffcf3f' }
 
-const base: Palette = { w: '#ffffff', p: '#1b1626', m: '#5a1a2a', t: '#ffffff' }
-
-const art: Record<string, PyxieArt> = {
-  sparkit: { palette: { b: '#ffd23f', d: '#d99a00', l: '#fff3a8', a: '#ffb000', c: '#bfe9ff', y: '#fff7c2', m: '#7a3b00' }, rows: [
-    '........', '.....a..', '......a.', '....bbbb', '...bbbbb', '..blbbbb', '..bwwbbb', '..bwpbbb',
-    '..bbbbbm', 'ccdbbbbb', 'ccddbbbb', '.c.ddbbb', '....dddd', '......yy', '.......y', '........'] },
-  sparkoon: { palette: { b: '#ffc93c', d: '#d48a00', l: '#fff0a0', a: '#ff7a2f', c: '#ffe680', y: '#fff6b0' }, rows: [
-    '......a.', '.....aa.', '....bbbb', '...bbbbb', '...bwwbb', '...bwpbb', '...bbbaa', 'cc..bbbb',
-    'ccc.bbbb', '.ccclbbb', '..ccdbbb', '...cddbb', '....dddd', '.....yyy', '....y..y', '...y....'] },
-  lumiprint: { palette: { b: '#fff1a8', d: '#e0b400', l: '#ffffff', a: '#ff8a00', c: '#ffd23f', y: '#ff9f1c' }, rows: [
-    '...y..y.', '...yy.yy', '....bbbb', '...bbbbb', 'c..bwwbb', 'cc.bwpbb', 'ccc.bbaa', 'cccc.bbb',
-    'ccccclbb', '.ccccbbb', '..cccdbb', '...ccddb', '....yddd', '...yy.yy', '..yy..y.', '.y......'] },
-  boxlet: { palette: { b: '#d9a35b', d: '#a8743a', l: '#f0c88a', a: '#f7f2e4', m: '#5a3a1a' }, rows: [
-    '........', '........', '...ddddd', '..dbbbbb', '.dbbbbbb', '.lbbbbbb', '.lbwwbbb', '.lbwpbbb',
-    '.lbbbbmm', '.lbbbbbb', '.lbbaaaa', '.lbbaaaa', '.dbbbbbb', '..dddddd', '...d...d', '........'] },
-  cratebit: { palette: { b: '#b97a3e', d: '#7d4f22', l: '#d9a35b', a: '#e8d3a2' }, rows: [
-    '........', '.....ddd', '.....dbb', '.....daa', '..dddddd', '.dbbbbbb', '.dbwwbbb', '.dbwpbbb',
-    '.dbbbbmm', '.dbbbbbb', '.dlaaaaa', '.dlbbbbb', '.dbbbbbb', '..dddddd', '..aa..aa', '..aa..aa'] },
-  vaultron: { palette: { b: '#8ea2b8', d: '#5a6b80', l: '#cdd9e6', a: '#ffd23f', c: '#3b4a5c' }, rows: [
-    '......a.', '......a.', '..dddddd', '.dllllll', '.dlbbbbb', '.dlwwbbb', '.dlwpbbb', '.dlbbbbb',
-    '.dbbbccc', '.dbbbcac', '.dbbbccc', 'ddbbbbbb', 'ddbbbbbb', '.ddddddd', '..aa..aa', '..aa..aa'] },
-  plusling: { palette: { b: '#ff8b3d', d: '#c95a14', l: '#ffd0a8', a: '#ffffff', c: '#ffc04d', m: '#6a2a0a' }, rows: [
-    '........', '.......a', '......aa', '....bbba', '...bbbbb', '..bbwwbb', '..bbwpbb', '..bbbbbb',
-    '...bbbmm', 'c..dbbbb', 'cc.dbbll', '.ccdbbll', '...dbbbb', '....dd..', '........', '........'] },
-  sumflare: { palette: { b: '#ff6b2c', d: '#b8400c', l: '#ffc08a', a: '#fff1c2', c: '#ff9f3d', y: '#ffd23f' }, rows: [
-    '...a....', '...aa...', '....bbbb', '...bbbbb', '..bbwwbb', '..bbwpbb', '..bbbbbb', '...bbmmm',
-    'cc.dbbbb', 'ccc.dbll', '.cccdbll', '..ccdbbb', '...dbbbb', 'y..ddd.d', 'yy......', '.y......'] },
-  calcudrake: { palette: { b: '#e8481e', d: '#9c2a0a', l: '#ffad80', a: '#ffd23f', c: '#ff7a2f', y: '#ffe14d' }, rows: [
-    '..a..a..', '..aa.aa.', '...bbbbb', '..bbbbbb', 'c.bwwbbb', 'cc.bwpbb', 'ccc.bbbb', 'cccc.mmm',
-    'ccccdbbb', '.cccdbll', '..ccdbll', '...dbbbb', '..ddbbbb', 'y.ddd.dd', 'yy.dd.dd', '.y......'] },
-  echobat: { palette: { b: '#8a6bd6', d: '#5b3fa8', a: '#ffd23f', c: '#b39cf0', m: '#2a1550' }, rows: [
-    '........', '....a...', '....ab..', '....bbbb', 'c..bbbbb', 'cc.bwwbb', 'cccbwpbb', 'ccccbbmm',
-    'cccccbbb', 'c.cc.bbb', '....dbbb', '.....ddd', '......d.', '........', '........', '........'] },
-  shoutbat: { palette: { b: '#6a48c8', d: '#3d2590', a: '#ffd23f', c: '#9f84ee', m: '#1a0b40' }, rows: [
-    '...a....', '...aa...', '...abbbb', 'c..bbbbb', 'cc.bwwbb', 'cccbwpbb', 'ccccbbbb', 'cccccmmm',
-    'ccccbmtm', 'cccc.bbb', 'cc.c.bbb', 'c...dbbb', '.....ddd', '.....d.d', '........', '........'] },
-  quotie: { palette: { b: '#ff6fae', d: '#c23d7e', l: '#ffc2dd' }, rows: [
-    '........', '........', '...bbb..', '..bbbbb.', '..bwpbb.', '..blbbb.', '...bbbb.', '....dbb.',
-    '....db..', '...db...', '..dd....', '........', '........', '........', '........', '........'] },
-  stringra: { palette: { b: '#e84a8f', d: '#a1255d', l: '#ffb0d0', a: '#fff1f7' }, rows: [
-    '........', '....bbbb', '...bbbbb', '...bwwbb', '...bwpbb', '....bbaa', '.....bbb', '...bbbb.',
-    '..bbab..', '.bbbb...', '.bab....', '..bbbb..', '....bbbb', '.....bab', '....ddd.', '........'] },
-  memoth: { palette: { b: '#9fb4d9', d: '#5f7aa8', l: '#d6e2f5', t: '#fffaf0' }, rows: [
-    '........', '...dddd.', '..dbbbbb', '.ddbbbbb', 'dddbwwbb', 'dddbwpbb', 'dd.bbbbb', 'd..bbtbb',
-    '...btbbb', '...bb.bb', '...bb..b', '...dd..b', '........', '........', '........', '........'] },
-  memammoth: { palette: { b: '#6f8fc8', d: '#3f5f98', l: '#b7c9ea', t: '#fffaf0', a: '#ffd23f' }, rows: [
-    '...llll.', '..lllll.', '.ddbbbbb', 'dddbbbbb', 'dddbwwbb', 'dddbwpbb', 'dd.bbbbb', 'd..bbtbb',
-    '..bbtbbb', '..atbbbb', '..ab.bbb', '..bb..bb', '..bb...b', '..dd...b', '........', '........'] },
-  modmole: { palette: { b: '#a07a5a', d: '#6b4a33', l: '#e2c6a5', a: '#ff8fb0', t: '#f2efe6', c: '#ff8b3d' }, rows: [
-    '........', '........', '....dddd', '...dbbbb', '..dbbbbb', '..dbpbbb', '..dbbbaa', '..dbbbbb',
-    '.ddbllll', 'tddbllcl', 'tt.dbllb', '...dbbbb', '....dd.d', '........', '........', '........'] },
-  divimole: { palette: { b: '#7d5a3e', d: '#4a3222', l: '#d1ad85', a: '#ff8fb0', t: '#ffffff', y: '#ffd23f' }, rows: [
-    '......yy', '....dddd', '...dbbbb', '..dbbbbb', '..dbwpbb', '..dbbbaa', '..dbbbbb', '.ddbllll',
-    'tddbllll', 'ttdbllll', 'ttt.dbll', 'tt..dbbb', '....dbbb', '...ddd.d', '........', '........'] },
-  booly: { palette: { b: '#7fd88f', d: '#3f9b55', l: '#d6f5dc', a: '#ffb84d', g: '#2fd06a', r: '#ff4d4d' }, overrides: [[11, 6, 'r']], rows: [
-    '........', '....a...', '....aa..', '...bbbbb', '..bbbbbb', '.bbwwwbb', '.bbwgwbb', '.bbwwwbb',
-    '.bbbbbaa', '.dbbbbba', '.dbllllb', '.ddbllll', '..dddbbb', '....a..a', '........', '........'] },
-  truthowl: { palette: { b: '#4fb86a', d: '#256b3a', l: '#c9efd2', a: '#ffd23f', g: '#2fd06a', r: '#ff4d4d' }, overrides: [[11, 6, 'r']], rows: [
-    '..a...a.', '..aa..aa', '..abbbbb', '.dbbbbbb', 'dbbwwwbb', 'dbbwwwbb', 'dbbwgwbb', 'dbbwwwbb',
-    'ddbbbbaa', 'dddbbbba', '.ddlllll', '.ddlllll', '..ddllll', '...dddbb', '...aa.aa', '........'] },
-  forkit: { palette: { b: '#c9a4ff', d: '#8a5fd6', a: '#5fd17a', c: '#8a6a4a' }, rows: [
-    '..a.....', '.aaa....', '..a.c...', '....c...', '.....c..', '......cc', '....bbbb', '...bbbbb',
-    '...bwwbb', '...bwpbb', '...bbbmm', '...dbbbb', '....dddd', '....d..d', '...dd.dd', '........'] },
-  splitroot: { palette: { b: '#8f68d8', d: '#5a3aa0', a: '#4fb86a', c: '#7a5a3a' }, rows: [
-    '.aa...aa', 'aaaa.aaa', '.ac..aac', '..c...cc', '...c.ccc', '....cccc', '...bbbbb', '..bbbbbb',
-    '..bwwbbb', '..bwpbbb', '..bbbmmm', '..dbbbbb', '.ddbbbbb', 'dd.dbbbb', 'd..dd.dd', '...d...d'] },
-  arduinix: { palette: { b: '#29a19c', d: '#176b68', a: '#ffd23f', c: '#1f7a3a', y: '#ffd23f', r: '#ff3b3b' }, rows: [
-    '......a.', '.....aa.', '....bbbb', '...bbbbb', 'c..bwwbb', 'cc.bwpbb', 'cyc.bbaa', 'cccy.bbb',
-    'cycccbbr', '.cyccbbr', '..cycdbb', '...ccddb', '....dddd', '....y..y', '...yy.yy', '........'] },
-  nullwing: { palette: { b: '#2b2140', d: '#140e22', a: '#ff3bd4', c: '#3d2a66', p: '#ff3bd4', m: '#ff3bd4' }, rows: [
-    '.a....a.', '..a..aa.', '....bbbb', '...bbbbb', 'c..bppbb', 'cc.bppbb', 'ccc.bbbb', 'cccc.bmm',
-    'ccccdbbb', 'a.ccdbbb', '.a.cdbbb', '....ddbb', 'a...dddd', '....a..a', '...a..a.', '..a.....'] },
-}
-
+/** Golden pyxies: the body colors turn to warm metal. */
 function shinyPalette(palette: Palette): Palette {
-  // Golden pyxies: body colors become warm metallic tones.
-  const golds = ['#ffe36e', '#e0a92a', '#fff6c4', '#ffcf3f']
   const out: Palette = { ...palette }
-  for (const [i, key] of ['b', 'd', 'l', 'c'].entries()) if (out[key]) out[key] = golds[i]
+  for (const key of Object.keys(golds)) if (out[key]) out[key] = golds[key]
   return out
 }
 
-export function pyxieCanvas(species: string, shiny = false) {
-  const design = art[species]
+/** A pyxie as pixel art. Sizes: 24 in the overworld, 48 in menus, 64 to 96 in battles and the inspector. */
+export function pyxieCanvas(species: string, shiny = false, size = 48, blink = false) {
+  const design = creatures[species]
   if (!design) return null
-  const grid = gridFrom(design.rows, true)
-  for (const [x, y, c] of design.overrides ?? []) grid[y][x] = c
-  const palette = { ...base, ...design.palette }
-  return renderGrid(`pyx:${species}:${shiny}`, outline(grid), shiny ? shinyPalette(palette) : palette, true)
+  return rasterize(`pyx:${species}:${shiny}`, design, { size, blink, shiny: shiny ? shinyPalette : undefined })
 }
 
-export function pyxieUrl(species: string, shiny = false): string {
-  return dataUrl(`pyx:${species}:${shiny}`, pyxieCanvas(species, shiny))
+export function pyxieUrl(species: string, shiny = false, size = 48, blink = false): string {
+  return dataUrl(`pyx:${species}:${shiny}:${size}:${blink}`, pyxieCanvas(species, shiny, size, blink))
 }
 
-export const hasArt = (species: string) => Boolean(art[species])
+export const hasArt = (species: string) => Boolean(creatures[species])
 
 // ---------------------------------------------------------------- PEOPLE
 
-const people: Record<'down' | 'up' | 'right', string[][]> = {
-  down: [[
-    '................', '................', '.....HHHHHH.....', '....HHHHHHHH....', '....HHHHHHHH....', '....HSSSSSSH....', '....SSESSESS....', '....SSSSSSSS....',
-    '.....SSSSSS.....', '....CCCCCCCC....', '...SCCCCCCCCS...', '...SCCCCCCCCS...', '....PPPPPPPP....', '....PPP..PPP....', '....BBB..BBB....', '................',
-  ], [
-    '................', '................', '.....HHHHHH.....', '....HHHHHHHH....', '....HHHHHHHH....', '....HSSSSSSH....', '....SSESSESS....', '....SSSSSSSS....',
-    '.....SSSSSS.....', '....CCCCCCCC....', '...SCCCCCCCC....', '...SCCCCCCCCS...', '....PPPPPPPPS...', '....PPP..PPP....', '....BBB.........', '................',
-  ]],
-  up: [[
-    '................', '................', '.....HHHHHH.....', '....HHHHHHHH....', '....HHHHHHHH....', '....HHHHHHHH....', '....HHHHHHHH....', '....SHHHHHHS....',
-    '.....SSSSSS.....', '....CCCCCCCC....', '...SCCCCCCCCS...', '...SCCCCCCCCS...', '....PPPPPPPP....', '....PPP..PPP....', '....BBB..BBB....', '................',
-  ], [
-    '................', '................', '.....HHHHHH.....', '....HHHHHHHH....', '....HHHHHHHH....', '....HHHHHHHH....', '....HHHHHHHH....', '....SHHHHHHS....',
-    '.....SSSSSS.....', '....CCCCCCCC....', '....CCCCCCCCS...', '...SCCCCCCCCS...', '...SPPPPPPPP....', '....PPP..PPP....', '.........BBB....', '................',
-  ]],
-  right: [[
-    '................', '................', '.....HHHHH......', '....HHHHHHH.....', '....HHHHHHHH....', '....HHHSSSSS....', '....HHSSSSES....', '....HSSSSSSS....',
-    '.....SSSSSS.....', '.....CCCCCC.....', '.....CCSCCC.....', '.....CCSCCC.....', '.....PPPPPP.....', '......PPPP......', '......BBBB......', '................',
-  ], [
-    '................', '................', '.....HHHHH......', '....HHHHHHH.....', '....HHHHHHHH....', '....HHHSSSSS....', '....HHSSSSES....', '....HSSSSSSS....',
-    '.....SSSSSS.....', '.....CCCCCC.....', '.....CCCSCC.....', '.....CCCSCC.....', '.....PPPPPP.....', '.....PP..PP.....', '.....BB..BB.....', '................',
-  ]],
+// Chibi people, 16×24: a big head, a small body. Frames: 0 stand, 1 left step, 2 stand, 3 right step.
+const head = {
+  down: [
+    '................', '.....HHHHHH.....', '...HHHHHHHHHH...', '..HHHHHHHHHHHH..', '..HHHHHHHHHHHH..', '.HHHHHHHHHHHHHH.',
+    '.HHHHSHHHHSHHHH.', '.HHSSSSSSSSSSHH.', '.HSSSSSSSSSSSSH.', '.HSSEwSSSSEwSSH.', '.HSSEESSSSEESSH.', '..SRSSSSSSSSRS..',
+    '...SSSSSSSSSS...', '....SSSSSSSS....',
+  ],
+  up: [
+    '................', '.....HHHHHH.....', '...HHHHHHHHHH...', '..HHHHHHHHHHHH..', '..HHHHHHHHHHHH..', '.HHHHHHHHHHHHHH.',
+    '.HHHHHHHHHHHHHH.', '.HHHHHHHHHHHHHH.', '.HHHHHHHHHHHHHH.', '.HHHHHHHHHHHHHH.', '.HHHHHHHHHHHHHH.', '..HHHHHHHHHHHH..',
+    '...HHHHHHHHHH...', '....SSSSSSSS....',
+  ],
+  right: [
+    '................', '.....HHHHHH.....', '...HHHHHHHHH....', '..HHHHHHHHHHH...', '..HHHHHHHHHHHH..', '.HHHHHHHHHHHHH..',
+    '.HHHHHHHHSHHHHH.', '.HHHHHHSSSSSSHH.', '.HHHHHSSSSSSSSH.', '.HHHHHSSSSSEwSS.', '.HHHHHSSSSSEESS.', '..HHHSSSSSSSRSS.',
+    '...HHSSSSSSSSS..', '.....SSSSSSSS...',
+  ],
+}
+
+const body = {
+  down: [
+    ['.....CCCCCC.....', '...CCCCCCCCCC...', '..SCCCCCCCCCCS..', '..SCCCCCCCCCCS..', '..SSCCCCCCCCSS..', '....PPPPPPPP....', '....PPP..PPP....', '....PPP..PPP....', '....BBB..BBB....', '................'],
+    ['.....CCCCCC.....', '...CCCCCCCCCC...', '..SCCCCCCCCCCS..', '..SCCCCCCCCCCSS.', '..SSCCCCCCCC....', '....PPPPPPPP....', '....PPP..PPP....', '....PPP..BBB....', '....BBB.........', '................'],
+    ['.....CCCCCC.....', '...CCCCCCCCCC...', '..SCCCCCCCCCCS..', '.SSCCCCCCCCCCS..', '....CCCCCCCCSS..', '....PPPPPPPP....', '....PPP..PPP....', '....BBB..PPP....', '.........BBB....', '................'],
+  ],
+  right: [
+    ['......CCCCCC....', '.....CCCCCCCC...', '.....CCCSCCCC...', '.....CCCSCCCC...', '.....CCCSSCCC...', '.....PPPPPPP....', '......PPPPP.....', '......PPPPP.....', '......BBBBBB....', '................'],
+    ['......CCCCCC....', '.....CCCCCCCC...', '.....CCCCCSCC...', '.....CCCCCSSC...', '.....CCCCCCCC...', '.....PPPPPPP....', '.....PP...PP....', '....PP.....PP...', '...BBB.....BBB..', '................'],
+    ['......CCCCCC....', '.....CCCCCCCC...', '.....CSCCCCCC...', '.....SSCCCCCC...', '.....CCCCCCCC...', '.....PPPPPPP....', '......PP.PP.....', '......PP.PP.....', '.....BBB.BBB....', '................'],
+  ],
 }
 
 function set(grid: string[][], x: number, y: number, c: string) {
   if (grid[y] && grid[y][x] !== undefined) grid[y][x] = c
 }
 
-function styled(look: Look, dir: 'down' | 'up' | 'right', frame: number): string[][] {
-  const grid = people[dir][frame].map((row) => [...row])
+function styled(look: Look, dir: 'down' | 'up' | 'right', pose: number): string[][] {
+  const bodyRows = dir === 'right' ? body.right[pose] : body.down[pose]
+  const grid = [...head[dir], ...bodyRows].map((row) => [...row])
   const side = dir === 'right'
-  if (look.style === 'bald') for (let y = 2; y <= 4; y += 1) for (let x = 0; x < 16; x += 1) if (grid[y][x] === 'H') grid[y][x] = 'S'
+  const front = dir === 'down'
+  const hairRows = (from: number, to: number, swap: string) => { for (let y = from; y <= to; y += 1) for (let x = 0; x < 16; x += 1) if (grid[y][x] === 'H') grid[y][x] = swap }
+  if (look.style === 'bald') { hairRows(1, 5, 'S'); if (front) hairRows(6, 6, 'S') }
   if (look.style === 'cap') {
-    for (let y = 2; y <= 4; y += 1) for (let x = 0; x < 16; x += 1) if (grid[y][x] === 'H') grid[y][x] = 'K'
-    if (dir === 'down') for (let x = 3; x <= 12; x += 1) set(grid, x, 4, 'K')
-    if (side) for (let x = 9; x <= 12; x += 1) set(grid, x, 4, 'K')
+    hairRows(1, 5, 'K')
+    if (front) for (let x = 1; x <= 14; x += 1) set(grid, x, 6, 'K')
+    if (side) for (let x = 7; x <= 15; x += 1) set(grid, x, 6, 'K')
+    if (dir === 'up') for (let x = 2; x <= 13; x += 1) set(grid, x, 6, 'K')
+    set(grid, 7, 3, 'k'); set(grid, 8, 3, 'k')
   }
   if (look.style === 'spiky') {
-    for (const x of side ? [5, 7, 9] : [5, 7, 9, 11]) set(grid, x - (side ? 0 : 1), 1, 'H')
-    if (!side) { set(grid, 4, 2, 'H'); set(grid, 11, 2, 'H') }
+    for (const x of side ? [3, 6, 9] : [3, 6, 9, 12]) { set(grid, x, 0, 'H'); set(grid, x + 1, 0, 'H') }
+    set(grid, side ? 1 : 2, 2, 'H'); set(grid, side ? 12 : 13, 2, 'H')
   }
-  if (look.style === 'bun') { if (side) { set(grid, 4, 2, 'H'); set(grid, 3, 3, 'H') } else { set(grid, 7, 1, 'H'); set(grid, 8, 1, 'H') } }
+  if (look.style === 'bun') {
+    if (side) for (const [x, y] of [[0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [1, 5], [0, 5]]) set(grid, x, y, 'H')
+    else for (let x = 6; x <= 9; x += 1) set(grid, x, 0, 'H')
+  }
   if (look.style === 'long') {
-    for (let y = 5; y <= 10; y += 1) {
-      if (dir === 'down') { set(grid, 3, y, 'H'); set(grid, 12, y, 'H') }
-      if (dir === 'up') for (let x = 4; x <= 11; x += 1) if (y <= 9) set(grid, x, y, 'H')
-      if (side) { set(grid, 4, y, 'H') }
+    for (let y = 11; y <= 17; y += 1) {
+      if (front) { set(grid, 1, y, 'H'); set(grid, 14, y, 'H'); if (y < 16) { set(grid, 2, y, 'H'); set(grid, 13, y, 'H') } }
+      if (dir === 'up' && y <= 16) for (let x = 2; x <= 13; x += 1) set(grid, x, y, 'H')
+      if (side) for (let x = 1; x <= 4; x += 1) set(grid, x, y, 'H')
     }
   }
   if (look.extra === 'glasses') {
-    if (dir === 'down') { for (const x of [5, 7, 8, 10]) set(grid, x, 6, 'g'); set(grid, 6, 6, 'q'); set(grid, 9, 6, 'q') }
-    if (side) { set(grid, 9, 6, 'g'); set(grid, 10, 6, 'q'); set(grid, 11, 6, 'g') }
+    if (front) { for (const x of [3, 6, 9, 12]) { set(grid, x, 9, 'g'); set(grid, x, 10, 'g') } for (const x of [4, 5, 10, 11]) set(grid, x, 8, 'g'); set(grid, 7, 9, 'g'); set(grid, 8, 9, 'g') }
+    if (side) { set(grid, 10, 9, 'g'); set(grid, 13, 9, 'g'); set(grid, 11, 8, 'g'); set(grid, 12, 8, 'g'); for (let x = 6; x <= 9; x += 1) set(grid, x, 9, 'g') }
   }
   if (look.extra === 'goggles') {
-    if (dir !== 'right') for (let x = 4; x <= 11; x += 1) set(grid, x, 4, 'k')
-    if (dir === 'down') { set(grid, 5, 4, 'q'); set(grid, 6, 4, 'q'); set(grid, 9, 4, 'q'); set(grid, 10, 4, 'q') }
-    if (side) { for (let x = 5; x <= 11; x += 1) set(grid, x, 4, 'k'); set(grid, 10, 4, 'q'); set(grid, 11, 4, 'q') }
+    if (!side) for (let x = 1; x <= 14; x += 1) set(grid, x, 5, 'k')
+    if (front) for (const x of [4, 5, 10, 11]) set(grid, x, 5, 'q')
+    if (side) { for (let x = 2; x <= 13; x += 1) set(grid, x, 5, 'k'); set(grid, 11, 5, 'q'); set(grid, 12, 5, 'q') }
   }
   if (look.extra === 'beard') {
-    if (dir === 'down') for (let y = 7; y <= 8; y += 1) for (let x = 5; x <= 10; x += 1) set(grid, x, y, 'H')
-    if (side) for (let y = 7; y <= 8; y += 1) for (let x = 7; x <= 11; x += 1) set(grid, x, y, 'H')
+    const [a, b] = side ? [7, 14] : [3, 12]
+    for (let y = 11; y <= 13; y += 1) for (let x = a; x <= b; x += 1) if (grid[y][x] === 'S' || grid[y][x] === 'R') set(grid, x, y, 'H')
   }
-  if (look.extra === 'apron') {
-    if (dir === 'down') for (let y = 10; y <= 12; y += 1) for (let x = 5; x <= 10; x += 1) set(grid, x, y, 'Y')
-    if (side) for (let y = 10; y <= 12; y += 1) for (let x = 8; x <= 10; x += 1) set(grid, x, y, 'Y')
+  if (look.extra === 'apron' && dir !== 'up') {
+    const [a, b] = side ? [9, 12] : [5, 10]
+    for (let y = 15; y <= 19; y += 1) for (let x = a; x <= b; x += 1) if (grid[y][x] === 'C' || grid[y][x] === 'P') set(grid, x, y, 'Y')
   }
+  if (look.extra === 'coat') for (let y = 15; y <= 20; y += 1) for (let x = 0; x < 16; x += 1) if (grid[y][x] === 'C' || (y >= 19 && grid[y][x] === 'P' && (x <= 4 || x >= 11))) set(grid, x, y, 'Z')
   return grid
 }
 
-/** One frame of a person: 0 standing, 1 and 2 walking. Left is the right frame mirrored. */
+/** One frame of a person: 0 or 2 standing, 1 and 3 walking. Left is the right frame mirrored. */
 export function personCanvas(look: Look, dir: Direction, frame: number) {
   const source = dir === 'left' ? 'right' : dir
-  const pose = frame === 0 ? 0 : 1
+  const f = ((frame % 4) + 4) % 4
+  const pose = f === 1 ? 1 : f === 3 ? 2 : 0
   let grid = styled(look, source, pose)
-  // The second walking frame swaps legs by mirroring the whole sprite (front and back views).
-  if (frame === 2 && source !== 'right') grid = grid.map((row) => [...row].reverse())
+  if (source === 'up' && pose) grid = grid.map((row, y) => (y >= 14 ? [...row].reverse() : row))
   if (dir === 'left') grid = grid.map((row) => [...row].reverse())
+  const cap = look.cap ?? look.shirt
   const palette: Palette = {
-    H: look.hair, S: look.skin, E: '#1b1626', C: look.shirt, P: look.pants, B: '#3a2a2a', K: look.cap ?? look.shirt,
-    Y: '#6b4a2a', g: '#2b2230', q: '#bfe8ff', k: '#3a3a48',
+    H: look.hair, S: look.skin, E: '#2a1d3a', w: '#ffffff', R: '#ff9a9a', C: look.shirt, P: look.pants, B: '#3a2a2a', K: cap,
+    k: look.extra === 'goggles' ? '#3a3a48' : shade(cap, 0.4), Y: '#f1e3c8', g: '#2b2230', q: '#bfe8ff', Z: '#f4f1ea',
   }
-  const key = `p:${JSON.stringify(look)}:${dir}:${frame}`
+  const key = `p:${JSON.stringify(look)}:${dir}:${f}`
   return renderGrid(key, outline(grid), palette, true)
 }
 
 export function personUrl(look: Look, dir: Direction = 'down', frame = 0): string {
-  return dataUrl(`p:${JSON.stringify(look)}:${dir}:${frame}`, personCanvas(look, dir, frame))
+  return dataUrl(`p:${JSON.stringify(look)}:${dir}:${((frame % 4) + 4) % 4}`, personCanvas(look, dir, frame))
 }
 
 // ---------------------------------------------------------------- OBJECTS AND ICONS

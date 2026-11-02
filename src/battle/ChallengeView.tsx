@@ -3,8 +3,12 @@ import { PythonCode } from '../components/PythonCode'
 import { audio } from '../engine/audio'
 import { buildWorks, joinTokens, orderWorks, produces, withLine, type Challenge } from './challenges'
 import { devState } from '../game/chapters'
+import { hasCanvas } from '../engine/pixels'
+import { randomRng } from '../lib/rng'
+import { MiniGame } from './games/MiniGame'
+import { assemble, isMini, miniLabel, toQuiz, type MiniChallenge } from './minigames'
 
-export interface ChallengeResult { correct: boolean; aided: 'none' | 'lens' | 'duck' }
+export interface ChallengeResult { correct: boolean; aided: 'none' | 'lens' | 'duck'; /** How well a mini-game went, from 0 to 1. */ score?: number }
 
 interface Props {
   challenge: Challenge
@@ -15,10 +19,13 @@ interface Props {
   onDone: (result: ChallengeResult) => void
   /** Quick challenges (dodges, compiling a cube) continue on their own after the result. */
   quick?: boolean
+  /** The pyxie that plays the mini-games: the bird, the projectile, the jumper. */
+  hero?: { species: string; shiny: boolean }
 }
 
 const kindLabel: Record<Challenge['kind'], string> = {
   predict: 'PREDICT THE OUTPUT', trace: 'TRACE THE VARIABLE', fill: 'FILL THE GAP', truefalse: 'TRUE OR FALSE', build: 'BUILD THE LINE', fix: 'FIND AND FIX', order: 'ORDER THE LINES', path: 'PICK THE PATH',
+  ...miniLabel,
 }
 
 function Code({ lines, highlight, onLine, marks = {} }: { lines: string[]; highlight?: number; onLine?: (index: number) => void; marks?: Record<number, 'good' | 'bad' | 'pick'> }) {
@@ -45,7 +52,10 @@ function FillCode({ lines, value }: { lines: string[]; value: string | null }) {
   </div>
 }
 
-export function ChallengeView({ challenge, title, lenses, ducks, onUseItem, onDone, quick = false }: Props) {
+export function ChallengeView({ challenge: original, title, lenses, ducks, onUseItem, onDone, quick = false, hero }: Props) {
+  // Without a canvas (old devices, tests) a mini-game becomes the same question with options.
+  const challenge = useMemo<Challenge>(() => (isMini(original.kind) && !hasCanvas() ? toQuiz(original as MiniChallenge, randomRng()) : original), [original])
+  const playing = isMini(challenge.kind)
   const [result, setResult] = useState<ChallengeResult | null>(null)
   const [hidden, setHidden] = useState<number[]>([])
   const [aid, setAid] = useState<ChallengeResult['aided']>('none')
@@ -65,11 +75,11 @@ export function ChallengeView({ challenge, title, lenses, ducks, onUseItem, onDo
     return () => window.clearTimeout(id)
   }, [result, quick])
 
-  const finish = (correct: boolean, how: ChallengeResult['aided'] = aid) => {
+  const finish = (correct: boolean, how: ChallengeResult['aided'] = aid, score?: number) => {
     if (doneRef.current) return
     doneRef.current = true
     audio.sfx(correct ? 'right' : 'wrong')
-    setResult({ correct, aided: how })
+    setResult({ correct, aided: how, score })
   }
 
   useEffect(() => {
@@ -99,6 +109,7 @@ export function ChallengeView({ challenge, title, lenses, ducks, onUseItem, onDo
   }
 
   const answerText = (): string => {
+    if (isMini(original.kind)) return miniAnswer(original as MiniChallenge)
     switch (challenge.kind) {
       case 'predict': case 'trace': case 'fill': return challenge.options[challenge.answer]
       case 'truefalse': return challenge.answer ? 'True' : 'False'
@@ -106,16 +117,22 @@ export function ChallengeView({ challenge, title, lenses, ducks, onUseItem, onDo
       case 'fix': return `Line ${challenge.bugLine + 1}: ${challenge.options[challenge.answer]}`
       case 'order': return challenge.lines.join('\n')
       case 'path': return `Line ${challenge.answerLine + 1}: ${challenge.code[challenge.answerLine].trim()}`
+      default: return ''
     }
   }
 
   if (result) {
     return <div className={`cv cv--result ${result.correct ? 'is-right' : 'is-wrong'}`}>
-      <div className="cv-result__badge">{result.correct ? (result.aided === 'duck' ? '🦆 QUACK! SOLVED' : '✓ CORRECT!') : '✗ NOT QUITE'}</div>
+      <div className="cv-result__badge">{result.correct ? (result.aided === 'duck' ? '🦆 QUACK! SOLVED' : result.score !== undefined && result.score >= 0.99 ? '★ PERFECT RUN!' : '✓ CORRECT!') : '✗ NOT QUITE'}</div>
+      {result.correct && result.score !== undefined && result.aided !== 'duck' && <p className="cv-result__bonus">Skill bonus: +{Math.round(result.score * 30)}% damage</p>}
       {!result.correct && <div className="cv-result__answer"><small>THE ANSWER</small><pre>{answerText()}</pre></div>}
       <p className="cv-result__explain">{challenge.explain}</p>
       <button className="btn btn--primary" autoFocus onClick={() => onDone(result)}>CONTINUE ▶</button>
     </div>
+  }
+
+  if (playing) {
+    return <MiniGame key={title} challenge={challenge as MiniChallenge} title={title} hero={hero} ducks={ducks} onDuck={askDuck} onFinish={(correct, score) => finish(correct, 'none', score)} />
   }
 
   const items = <div className="cv-items">
@@ -217,6 +234,21 @@ export function ChallengeView({ challenge, title, lenses, ducks, onUseItem, onDo
       : <div className="cv-options">{fixing.options.map((option) => <button key={option} className="cv-option" onClick={() => finish(produces(withLine(fixing.code, fixing.bugLine, option)) === fixing.target.join('\n'))}><pre>{option}</pre></button>)}</div>}
     {items}
   </div>
+}
+
+/** What the right answer was, in words, for the result card after a mini-game. */
+function miniAnswer(challenge: MiniChallenge): string {
+  switch (challenge.kind) {
+    case 'catch':
+    case 'sling': return challenge.options[challenge.answer]
+    case 'flappy': return challenge.code.map((line, i) => `${line.padEnd(Math.max(...challenge.code.map((l) => l.length)))}   # ${challenge.focus} is ${challenge.gates[i].options[challenge.gates[i].answer]}`).join('\n')
+    case 'jump': return challenge.rows.slice(0, 4).map((row) => `${row.find((p) => p.value)!.expr}  → True`).join('\n')
+    case 'match': {
+      const value = challenge.pool[0].value
+      return `${challenge.pool.filter((tile) => tile.value === value).map((tile) => tile.expr).join('  =  ')}  =  ${value}`
+    }
+    case 'blocks': return assemble(challenge, challenge.solution).join('\n')
+  }
 }
 
 function shuffleIndices(n: number): number[] {

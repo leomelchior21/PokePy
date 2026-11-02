@@ -23,6 +23,8 @@ import { Menu } from './Menu'
 import { Shop } from './Shop'
 import { BadgeIcon } from './Badge'
 import { DevPanel } from './DevPanel'
+import { Joystick } from './Joystick'
+import { PyxieInspector } from './PyxieInspector'
 import { canUseDevTools } from '../game/chapters'
 import { getMap } from '../world/maps'
 
@@ -35,6 +37,7 @@ type Overlay =
   | { type: 'credits'; resolve: () => void }
   | { type: 'duel'; duelId: string; title: string; resolve: (won: boolean) => void }
   | { type: 'badge'; badge: string; resolve: () => void }
+  | { type: 'inspect'; species: string; choose?: string; banner?: string; resolve: (chosen: boolean) => void }
 
 const keyDir: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' }
 
@@ -76,6 +79,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     duel: (duelId, title) => new Promise<boolean>((resolve) => setOverlay({ type: 'duel', duelId, title, resolve })),
     sfx: (name) => audio.sfx(name),
     flash: async () => { setFlash(true); await new Promise((r) => window.setTimeout(r, 500)); setFlash(false) },
+    inspect: (species, options) => new Promise<boolean>((resolve) => setOverlay({ type: 'inspect', species, choose: options?.choose, banner: options?.banner, resolve })),
   }), [])
 
   const say = ui.say
@@ -291,7 +295,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
   useEffect(() => {
     if (hasFlag(saveRef.current, 'intro_done')) return
     const id = window.setTimeout(() => void run(async () => {
-      await say([`${saveRef.current.displayName.split(' ')[0]}! Wake up!`, 'Today is the day: Leo Maker wants to see you at the Makerspace.', 'Move with the arrows (or the D-pad). Talk with A, Enter or Space. Open the menu with MENU or Esc.'], 'Mom')
+      await say([`${saveRef.current.displayName.split(' ')[0]}! Wake up!`, 'Today is the day: Leo Maker wants to see you at the Makerspace.', 'Move with the arrows, WASD or the joystick, in any direction. Talk with A, Enter or Space. Open the menu with MENU or Esc.'], 'Mom')
       set((s) => setFlag(s, 'intro_done'))
     }), 600)
     return () => window.clearTimeout(id)
@@ -335,14 +339,6 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     if (runtimeRef.current) runtimeRef.current.busy = Boolean(overlay) || menu || dev || runtimeRef.current.busy
   }, [dev, menu, overlay])
 
-  const touch = (dir: Direction, on: boolean) => {
-    audio.unlock()
-    const runtime = runtimeRef.current
-    if (!runtime) return
-    if (on) runtime.press(dir)
-    else runtime.release(dir)
-  }
-
   const closeMenu = () => {
     setMenu(false)
     if (runtimeRef.current) runtimeRef.current.busy = false
@@ -371,12 +367,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     </div>
 
     <div className="pad" aria-hidden={Boolean(overlay) || menu}>
-      <div className="pad__dirs">
-        {(['up', 'left', 'right', 'down'] as Direction[]).map((dir) => <button key={dir} className={`pad__dir pad__dir--${dir}`} aria-label={`Move ${dir}`}
-          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); touch(dir, true) }} onPointerUp={() => touch(dir, false)} onPointerCancel={() => touch(dir, false)} onPointerLeave={() => touch(dir, false)}>
-          {dir === 'up' ? '▲' : dir === 'down' ? '▼' : dir === 'left' ? '◀' : '▶'}
-        </button>)}
-      </div>
+      <Joystick onMove={(x, y) => { audio.unlock(); runtimeRef.current?.setStick(x, y) }} />
       <div className="pad__actions">
         <button className="pad__btn pad__btn--b" aria-label="Run (hold)" onPointerDown={() => { if (runtimeRef.current) runtimeRef.current.running = true }} onPointerUp={() => { if (runtimeRef.current) runtimeRef.current.running = false }} onPointerLeave={() => { if (runtimeRef.current) runtimeRef.current.running = false }}>B</button>
         <button className="pad__btn pad__btn--a" aria-label="Talk or interact" onClick={() => { audio.unlock(); if (performance.now() - lastClose.current > 250) runtimeRef.current?.interact() }}>A</button>
@@ -412,6 +403,8 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     {overlay?.type === 'shop' && <div className="overlay"><Shop tier={overlay.tier} get={get} set={set} onClose={() => { const r = overlay.resolve; closeOverlay(); r() }} /></div>}
     {overlay?.type === 'box' && <div className="overlay"><CloudBox get={get} set={set} onClose={() => { const r = overlay.resolve; closeOverlay(); r() }} /></div>}
     {overlay?.type === 'credits' && <div className="overlay overlay--battle"><Credits save={save} onClose={() => { const r = overlay.resolve; closeOverlay(); r() }} /></div>}
+    {overlay?.type === 'inspect' && <PyxieInspector species={overlay.species} banner={overlay.banner} onClose={() => { const r = overlay.resolve; closeOverlay(); r(false) }}
+      actions={overlay.choose ? [{ label: overlay.choose, primary: true, onClick: () => { const r = overlay.resolve; closeOverlay(); r(true) } }, { label: 'NOT YET', onClick: () => { const r = overlay.resolve; closeOverlay(); r(false) } }] : undefined} />}
     {overlay?.type === 'badge' && badgeInfo && <div className="overlay overlay--badge" onClick={() => { const r = overlay.resolve; closeOverlay(); r() }}>
       <div className="badge-award"><BadgeIcon id={badgeInfo.id} size={140} /><small>{badgeInfo.lab.toUpperCase()}</small><h2>{badgeInfo.name}!</h2><p>{badgeInfo.master} recognizes your code.</p><button className="btn btn--primary" autoFocus>AWESOME!</button></div>
     </div>}

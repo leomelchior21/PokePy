@@ -14,6 +14,8 @@ export type Direction = 'up' | 'down' | 'left' | 'right'
 
 /** How a challenge is played. Each one is a different little game. */
 export type ChallengeKind = 'predict' | 'trace' | 'build' | 'truefalse' | 'fix' | 'order' | 'path' | 'fill'
+  /** Arcade mini-games, each one driven by real Python. */
+  | 'catch' | 'jump' | 'flappy' | 'sling' | 'match' | 'blocks'
 
 export type Tier = 1 | 2 | 3
 

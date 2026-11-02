@@ -3,6 +3,7 @@ import { moves } from '../data/moves'
 import { createRng } from '../lib/rng'
 import { conceptOrder } from '../data/concepts'
 import { buildWorks, createChallenge, createDodge, orderWorks, produces, run, screen, withLine } from './challenges'
+import { runBlocks, toQuiz } from './minigames'
 
 const SEEDS = 250
 
@@ -51,12 +52,55 @@ describe('challenge generators', () => {
           case 'order':
             expect(orderWorks(challenge, challenge.lines), where).toBe(true)
             break
+          case 'catch':
+          case 'sling':
+            expect(new Set(challenge.options).size, where).toBe(challenge.options.length)
+            expect(challenge.options.length, where).toBeGreaterThanOrEqual(3)
+            expect(screen(challenge.code), where).toBe(challenge.options[challenge.answer])
+            break
+          case 'flappy':
+            expect(challenge.gates.length, where).toBe(challenge.code.length)
+            for (const gate of challenge.gates) {
+              expect(new Set(gate.options).size, where).toBe(gate.options.length)
+              expect(screen([...challenge.code.slice(0, gate.line + 1), `print(${challenge.focus})`]), where).toBe(gate.options[gate.answer])
+            }
+            break
+          case 'jump':
+            expect(challenge.rows.length, where).toBe(7)
+            for (const row of challenge.rows) {
+              expect(row.filter((p) => p.value).length, where).toBe(1)
+              for (const p of row) expect(screen([...challenge.setup, `print(${p.expr})`]) === 'True', `${where} ${p.expr}`).toBe(p.value)
+            }
+            break
+          case 'match': {
+            const groups = new Map<string, number>()
+            for (const tile of challenge.pool) {
+              expect(screen([...challenge.setup, `print(${tile.expr})`]), `${where} ${tile.expr}`).toBe(tile.value)
+              groups.set(tile.value, (groups.get(tile.value) ?? 0) + 1)
+            }
+            expect(groups.size, where).toBe(4)
+            for (const count of groups.values()) expect(count, where).toBeGreaterThanOrEqual(3)
+            break
+          }
+          case 'blocks':
+            expect(runBlocks(challenge, challenge.solution).every((r) => r.pass), `${where}: ${challenge.solution.join(' | ')}`).toBe(true)
+            for (const piece of challenge.solution) expect(challenge.pieces, where).toContain(piece)
+            expect(challenge.slots.filter((slot) => !slot.fixed).length, where).toBe(challenge.solution.length)
+            break
           case 'path': {
             const result = run(challenge.code)
             expect(result.events.some((event) => event.kind === 'print' && event.line === challenge.answerLine), where).toBe(true)
             expect(challenge.code[challenge.answerLine].trim().startsWith('print('), where).toBe(true)
             break
           }
+        }
+        if (['catch', 'sling', 'flappy', 'jump', 'match', 'blocks'].includes(challenge.kind)) {
+          const quiz = toQuiz(challenge as Parameters<typeof toQuiz>[0], createRng(seed))
+          expect(quiz.options.length, `${where} quiz`).toBeGreaterThanOrEqual(2)
+          expect(new Set(quiz.options).size, `${where} quiz`).toBe(quiz.options.length)
+          expect(quiz.answer, `${where} quiz`).toBeGreaterThanOrEqual(0)
+          if (challenge.kind === 'catch' || challenge.kind === 'sling') expect(screen(quiz.code), where).toBe(quiz.options[quiz.answer])
+          if (challenge.kind === 'flappy') expect(screen([...quiz.code, `print(${quiz.focus})`]), where).toBe(quiz.options[quiz.answer])
         }
       }
     })

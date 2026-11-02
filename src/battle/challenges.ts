@@ -3,8 +3,9 @@
 import { runDecisionProgram, type DecisionRun } from '../lib/decisionTracer'
 import type { Rng } from '../lib/rng'
 import type { ChallengeKind, Concept, Tier } from '../types'
+import { createMini, type MiniChallenge } from './minigames'
 
-interface Base { concept: Concept; tier: Tier; prompt: string; explain: string }
+export interface Base { concept: Concept; tier: Tier; prompt: string; explain: string }
 
 export type ChoiceChallenge = Base & { kind: 'predict' | 'trace' | 'fill'; code: string[]; options: string[]; answer: number; focus?: string }
 export type TrueFalseChallenge = Base & { kind: 'truefalse'; code: string[]; claim?: string; answer: boolean; seconds: number }
@@ -13,12 +14,13 @@ export type FixChallenge = Base & { kind: 'fix'; code: string[]; bugLine: number
 export type OrderChallenge = Base & { kind: 'order'; lines: string[]; target: string }
 export type PathChallenge = Base & { kind: 'path'; code: string[]; answerLine: number }
 
-export type Challenge = ChoiceChallenge | TrueFalseChallenge | BuildChallenge | FixChallenge | OrderChallenge | PathChallenge
+export type QuizChallenge = ChoiceChallenge | TrueFalseChallenge | BuildChallenge | FixChallenge | OrderChallenge | PathChallenge
+export type Challenge = QuizChallenge | MiniChallenge
 
-const names = ['Ana', 'Leo', 'Bia', 'Theo', 'Maya', 'Kai', 'Lia', 'Brian', 'Nina', 'Davi', 'Iris', 'Rafa']
-const words = ['robot', 'laser', 'pizza', 'pixel', 'rocket', 'cookie', 'drone', 'magnet', 'cactus', 'banana', 'circuit', 'arduino']
-const greetings = ['Hi', 'Hello', 'Hey', 'Welcome', 'Bye', 'Good job']
-const things = [
+export const names = ['Ana', 'Leo', 'Bia', 'Theo', 'Maya', 'Kai', 'Lia', 'Brian', 'Nina', 'Davi', 'Iris', 'Rafa']
+export const words = ['robot', 'laser', 'pizza', 'pixel', 'rocket', 'cookie', 'drone', 'magnet', 'cactus', 'banana', 'circuit', 'arduino']
+export const greetings = ['Hi', 'Hello', 'Hey', 'Welcome', 'Bye', 'Good job']
+export const things = [
   { name: 'coins', unit: 'coins' }, { name: 'score', unit: 'points' }, { name: 'battery', unit: '%' },
   { name: 'level', unit: '' }, { name: 'lives', unit: '' }, { name: 'speed', unit: 'km/h' }, { name: 'leds', unit: '' },
 ]
@@ -39,7 +41,7 @@ function q(text: string): string {
 }
 
 /** Shuffles the right answer in among distinct distractors. */
-function choice(rng: Rng, correct: string, distractors: string[], fallback: () => string): { options: string[]; answer: number } {
+export function choice(rng: Rng, correct: string, distractors: string[], fallback: () => string): { options: string[]; answer: number } {
   const pool: string[] = []
   for (const item of distractors) if (item !== correct && !pool.includes(item) && item.trim() !== '') pool.push(item)
   let guard = 0
@@ -311,7 +313,7 @@ function logicFill(rng: Rng): ChoiceChallenge {
 
 // ----------------------------------------------------------------- BRANCH
 
-const rules = [
+export const rules = [
   { v: 'temp', limit: 30, op: '>', yes: 'Fan ON', no: 'Fan OFF' },
   { v: 'age', limit: 13, op: '>=', yes: 'Welcome in', no: 'Too young' },
   { v: 'coins', limit: 5, op: '>=', yes: 'Snack!', no: 'Need coins' },
@@ -427,7 +429,21 @@ export function createChallenge(concept: Concept, kind: ChallengeKind, tier: Tie
     case 'branch:path': return branchPath(rng, tier >= 3 ? 3 : 1)
     case 'branch:predict': return branchPredict(rng)
     case 'branch:fix': return branchFix(rng)
+    case `${concept}:catch`: case `${concept}:jump`: case `${concept}:flappy`: case `${concept}:sling`: case `${concept}:match`: case `${concept}:blocks`:
+      return createMini(concept, kind as MiniChallenge['kind'], tier, rng)
     default: throw new Error(`No challenge for ${concept}:${kind}`)
+  }
+}
+
+/** A question with options for a concept, the raw material of several mini-games. */
+export function choiceFor(concept: Concept, tier: Tier, rng: Rng): ChoiceChallenge {
+  switch (concept) {
+    case 'print': return printPredict(rng, tier >= 2 ? 2 : 1)
+    case 'text': return textPredict(rng)
+    case 'var': return varTrace(rng, tier >= 2 ? 2 : 1)
+    case 'math': return rng.chance(0.5) ? mathPredict(rng, tier >= 3 ? 3 : 2) : mathTrace(rng)
+    case 'logic': return logicPredict(rng)
+    case 'branch': return branchPredict(rng)
   }
 }
 

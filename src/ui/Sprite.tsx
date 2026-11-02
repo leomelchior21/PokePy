@@ -4,8 +4,13 @@ import { concepts } from '../data/concepts'
 import type { Concept, Direction } from '../types'
 import type { Look } from '../world/types'
 
+/** The art resolution for a display size: crisp pixels without huge blocks. */
+function artSize(size: number): number {
+  return size <= 36 ? 32 : size <= 76 ? 48 : size <= 150 ? 64 : 96
+}
+
 export function PyxieImg({ species, shiny = false, size = 64, className = '', style }: { species: string; shiny?: boolean; size?: number; className?: string; style?: CSSProperties }) {
-  const src = pyxieUrl(species, shiny)
+  const src = pyxieUrl(species, shiny, artSize(size))
   if (!src) return <span className={`px-sprite px-sprite--empty ${className}`} style={{ width: size, height: size, ...style }} aria-hidden="true" />
   return <img className={`px-sprite ${className}`} src={src} width={size} height={size} alt="" draggable={false} style={style} />
 }

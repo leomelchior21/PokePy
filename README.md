@@ -6,10 +6,28 @@ coding challenges, then face six Lab Masters whose pyxies only fall to real Pyth
 
 ## What students do
 
-- **Explore** 15 outdoor areas and 30+ interiors, from Vila Maker to the Lourenço Castanho Academy.
-- **Battle**: every move is a mini-game built from the concepts they know: predict the output, trace a
-  variable, build a line from pieces, true or false, find and fix the bug, order the lines, pick the
-  if/else path, fill the gap. Every answer is computed by a Python tracer, never typed by hand.
+- **Explore** 15 outdoor areas and 30+ interiors, from Vila Maker to the Lourenço Castanho Academy. They
+  move freely in any direction with the keyboard (arrows or WASD, diagonals included) or a floating
+  analog joystick on touch screens. The valley is alive: trees sway, birds peck and scatter when you get
+  close, flocks cross the sky, butterflies, fireflies, falling leaves, chimney smoke, fish ripples, cloud
+  shadows and sun rays.
+- **Battle**: every move is a challenge built from the concepts they know. Quizzes (predict the output,
+  trace a variable, build a line, true or false, find and fix, order the lines, pick the path, fill the
+  gap) and six arcade mini-games, all about Python:
+  - **Output Catcher**: values rain down; catch the one the code prints.
+  - **Print Slingshot**: launch your pyxie at the tower that shows the real output.
+  - **Trace Flight**: each gate is one line of code; fly through the variable's new value. The code
+    panel fills in like a trace table.
+  - **True Jump**: bounce up on the conditions that are True; False ones crumble.
+  - **Value Crush**: match-3 where tiles are expressions and matches are equal values.
+  - **Code Builder**: snap blocks into slots (indentation included) and pass every test, with a
+    line-by-line run.
+  Every answer is computed by a Python tracer, never typed by hand. A mini-game played well adds up to
+  30% damage.
+- **Look closer**: the Pyxie Inspector shows any pyxie big on a spotlit stage, breathing and blinking,
+  with a pixel grid, zoom, stats, its evolution line, its moves and the pyxie written as Python
+  variables. It opens when choosing a starter, from the team and the Codex, when switching in battle and
+  after every catch.
 - **Dodge** enemy attacks with quick True/False questions. Three right answers in a row land a combo.
 - **Catch** wild pyxies: weaken them, then "compile" a Bytecube with one quick question.
 - **Code duels**: Lab Masters, Dr. Segfault and the champion Leo Maker fight with the Final Bosses
@@ -27,6 +45,20 @@ npm run dev      # http://localhost:5173
 npm test         # challenge generators, maps, a full robot playthrough, screens
 npm run build
 ```
+
+## Art
+
+Everything is drawn in code, so the game ships with no image files:
+
+- Pyxies, trees, bushes and rocks are vector designs (`src/engine/creatures.ts`, `src/engine/props.ts`)
+  that `src/engine/raster.ts` turns into pixel art at any size, with cel shading, dithering and
+  selective outlines.
+- The outdoor ground (`src/engine/terrain.ts`) samples smooth fields per pixel, so paths, sand and
+  shores are round and organic; cliffs, ledges and piers are autotiled on top.
+- Ambient life lives in `src/engine/ambient.ts`; people are 16×24 chibi sprites in `src/engine/art.ts`.
+
+In development, `?gallery` shows every pyxie and person, `?mini=flappy&concept=var&tier=2` opens one
+mini-game, and `?chapter=route1` (any chapter id from `src/game/chapters.ts`) skips the login.
 
 ## Login and saves
 

@@ -80,8 +80,11 @@ export function displayName(pyxie: OwnedPyxie): string {
 
 export interface DamageResult { damage: number; multiplier: number; combo: boolean }
 
-/** Damage from a landed move. Combos (three right answers in a row) hit harder. */
-export function moveDamage(attacker: OwnedPyxie, defender: OwnedPyxie, moveId: string, streak: number, rng: Rng): DamageResult {
+/**
+ * Damage from a landed move. Combos (three right answers in a row) hit harder, and so does a
+ * mini-game played well: skill goes from 0 to 1 and adds up to 30%.
+ */
+export function moveDamage(attacker: OwnedPyxie, defender: OwnedPyxie, moveId: string, streak: number, rng: Rng, skill = 0): DamageResult {
   const move = getMove(moveId)
   const a = statsFor(attacker.species, attacker.level)
   const d = statsFor(defender.species, defender.level)
@@ -89,7 +92,7 @@ export function moveDamage(attacker: OwnedPyxie, defender: OwnedPyxie, moveId: s
   const sameConcept = getSpecies(attacker.species).concept === move.concept ? 1.2 : 1
   const combo = streak >= 3
   const raw = (((2 * attacker.level) / 5 + 2) * move.power * (a.atk / d.def)) / 17 + 3
-  const damage = Math.max(1, Math.floor(raw * multiplier * sameConcept * (combo ? 1.3 : 1) * (0.9 + rng.next() * 0.2)))
+  const damage = Math.max(1, Math.floor(raw * multiplier * sameConcept * (combo ? 1.3 : 1) * (1 + 0.3 * Math.max(0, Math.min(1, skill))) * (0.9 + rng.next() * 0.2)))
   return { damage, multiplier, combo }
 }
 

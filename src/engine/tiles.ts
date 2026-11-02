@@ -364,97 +364,141 @@ export function drawTile(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: num
   }
 }
 
-/** Buildings are painted whole, over the tiles they stand on, with a soft shadow. */
+/** Buildings are painted whole, over the ground they stand on: shingled roofs, timber walls, a door with an awning. */
 export function drawBuilding(ctx: Ctx, building: Building, ox: number, oy: number, frame: number) {
   const w = building.w * 16
   const h = building.h * 16
   const door = doorOf(building)
   const dx = ox + (door.x - building.x) * 16
   if (building.kind === 'cave') {
-    px(ctx, C.outline, ox, oy + 4, w, h - 4)
-    px(ctx, C.rockDark, ox + 1, oy + 5, w - 2, h - 6)
-    px(ctx, C.rock, ox + 2, oy + 2, w - 4, h - 10)
-    px(ctx, C.rockLight, ox + 5, oy + 3, w - 16, 3)
-    px(ctx, C.rockShine, ox + 6, oy + 3, 4, 1)
-    px(ctx, C.outline, dx + 1, oy + h - 15, 14, 15)
-    px(ctx, '#140e0a', dx + 2, oy + h - 14, 12, 14)
-    px(ctx, '#2b1d14', dx + 4, oy + h - 12, 8, 2)
+    // A rocky mound with a dark arch, like a hole in the cliff.
+    const rock = '#a88a74'
+    ctx.fillStyle = 'rgba(30, 20, 10, 0.25)'
+    ctx.fillRect(ox + 2, oy + h - 2, w, 4)
+    px(ctx, '#3a2c24', ox, oy + 6, w, h - 6)
+    px(ctx, '#3a2c24', ox + 4, oy + 1, w - 8, 6)
+    px(ctx, rock, ox + 1, oy + 7, w - 2, h - 8)
+    px(ctx, rock, ox + 5, oy + 2, w - 10, 6)
+    for (let x = 2; x < w - 2; x += 4) { px(ctx, '#c6a88e', ox + x, oy + 8, 1, h - 12); px(ctx, '#7e6656', ox + x + 3, oy + 8, 1, h - 12) }
+    px(ctx, '#86cb5e', ox + 5, oy + 1, w - 10, 3)
+    px(ctx, '#a8e07c', ox + 6, oy + 1, w - 12, 1)
+    px(ctx, '#3a2c24', dx + 1, oy + h - 14, 14, 14)
+    px(ctx, '#3a2c24', dx + 3, oy + h - 16, 10, 2)
+    px(ctx, '#120c0a', dx + 2, oy + h - 13, 12, 13)
+    px(ctx, '#120c0a', dx + 4, oy + h - 15, 8, 2)
+    px(ctx, '#2b1d14', dx + 4, oy + h - 11, 8, 2)
     return
   }
   const academy = building.kind === 'academy'
-  const roofH = Math.min(h - 20, Math.max(18, Math.floor(h * (academy ? 0.38 : 0.48))))
+  const roofH = Math.min(h - 22, Math.max(20, Math.floor(h * (academy ? 0.4 : 0.52))))
   const wallH = h - roofH
-  const wallColor = academy ? '#fff2c2' : building.kind === 'lab' ? '#eef3fa' : '#f6ead2'
-  // Ground shadow.
-  ctx.fillStyle = 'rgba(20, 30, 20, 0.25)'
-  ctx.fillRect(ox + 3, oy + h - 2, w, 4)
-  ctx.fillRect(ox + w, oy + roofH, 3, wallH + 2)
-  // Walls with wood siding.
-  px(ctx, C.outline, ox, oy + roofH - 1, w, wallH + 1)
-  px(ctx, wallColor, ox + 1, oy + roofH, w - 2, wallH - 1)
-  for (let y = oy + roofH + 3; y < oy + h - 2; y += 4) px(ctx, shade(wallColor, -0.1), ox + 1, y, w - 2, 1)
-  px(ctx, shade(wallColor, -0.28), ox + 1, oy + h - 3, w - 2, 2)
-  // Roof: shingles, an outline and the eave's shadow on the wall.
+  const wallColor = academy ? '#fff2c2' : building.kind === 'lab' ? '#eef3fa' : building.kind === 'station' ? '#fff3f0' : building.kind === 'mart' ? '#eef4ff' : building.kind === 'makerspace' ? '#ffeccc' : '#f6e6c8'
+  const ink = '#2a1a22'
+  // Ground shadow to the bottom right.
+  ctx.fillStyle = 'rgba(20, 30, 20, 0.26)'
+  ctx.fillRect(ox + 4, oy + h - 1, w, 4)
+  ctx.fillRect(ox + w, oy + roofH, 4, wallH + 2)
+  // Walls: planks, timber corners, a stone foundation.
+  px(ctx, ink, ox, oy + roofH - 2, w, wallH + 2)
+  px(ctx, wallColor, ox + 1, oy + roofH - 1, w - 2, wallH)
+  for (let y = oy + roofH + 2; y < oy + h - 4; y += 4) { px(ctx, shade(wallColor, -0.08), ox + 1, y, w - 2, 1); px(ctx, shade(wallColor, 0.35), ox + 1, y + 1, w - 2, 1) }
+  const timber = academy ? '#6a2fb8' : '#8a5a32'
+  for (const tx of [ox + 1, ox + w - 4]) { px(ctx, timber, tx, oy + roofH - 1, 3, wallH - 3); px(ctx, shade(timber, 0.3), tx, oy + roofH - 1, 1, wallH - 3) }
+  px(ctx, '#8e8884', ox + 1, oy + h - 5, w - 2, 4)
+  for (let x = 0; x < w - 2; x += 5) { px(ctx, '#b4aea8', ox + 2 + x + ((x / 5) % 2) * 2, oy + h - 5, 3, 1); px(ctx, '#6a6460', ox + 1 + x, oy + h - 3, 1, 2) }
+  px(ctx, ink, ox, oy + h - 1, w, 1)
+  // Chimney.
+  if (building.kind === 'house' || building.kind === 'makerspace') {
+    const cx = ox + w - 14
+    px(ctx, ink, cx - 1, oy - 9, 9, 14); px(ctx, '#b0533a', cx, oy - 8, 7, 12); px(ctx, '#d97a5a', cx, oy - 8, 2, 12)
+    for (let y = oy - 6; y < oy + 3; y += 3) px(ctx, '#8a3a26', cx, y, 7, 1)
+    px(ctx, ink, cx - 2, oy - 10, 11, 3); px(ctx, '#6a6460', cx - 1, oy - 9, 9, 1)
+  }
+  // Roof: overhanging eaves, scalloped shingle rows lit from above, a ridge cap.
   const roof = building.roof
-  px(ctx, C.outline, ox - 2, oy - 1, w + 4, roofH + 2)
-  px(ctx, roof, ox - 1, oy, w + 2, roofH)
-  for (let y = 3, row = 0; y < roofH - 2; y += 4, row += 1) {
-    px(ctx, shade(roof, -0.18), ox - 1, oy + y, w + 2, 1)
-    for (let x = (row % 2) * 4; x < w + 2; x += 8) px(ctx, shade(roof, -0.18), ox - 1 + x, oy + y - 3, 1, 3)
+  const rx = ox - 3
+  const rw = w + 6
+  px(ctx, shade(roof, -0.62), rx - 1, oy - 2, rw + 2, roofH + 3)
+  for (let y = 0; y < roofH; y += 1) {
+    const row = Math.floor(y / 5)
+    const inRow = y % 5
+    const tone = shade(roof, 0.14 - (y / roofH) * 0.3)
+    px(ctx, tone, rx, oy - 1 + y, rw, 1)
+    if (inRow === 0) px(ctx, shade(tone, 0.22), rx, oy - 1 + y, rw, 1)
+    if (inRow === 4) for (let x = (row % 2) * 2; x < rw; x += 4) { px(ctx, shade(tone, -0.28), rx + x, oy - 1 + y, 1, 1); px(ctx, shade(tone, -0.18), rx + x + 1, oy - 1 + y, 2, 1) }
   }
-  px(ctx, shade(roof, 0.35), ox - 1, oy, w + 2, 2)
-  px(ctx, shade(roof, -0.4), ox - 1, oy + roofH - 3, w + 2, 3)
-  ctx.fillStyle = 'rgba(0,0,0,0.18)'
-  ctx.fillRect(ox + 1, oy + roofH, w - 2, 2)
-  if (building.kind === 'house') {
-    px(ctx, C.outline, ox + w - 14, oy - 7, 8, 9); px(ctx, '#b0533a', ox + w - 13, oy - 6, 6, 7); px(ctx, '#d97a5a', ox + w - 13, oy - 6, 6, 1)
-  }
+  px(ctx, shade(roof, -0.3), rx, oy - 1, 2, roofH)
+  px(ctx, shade(roof, -0.3), rx + rw - 2, oy - 1, 2, roofH)
+  px(ctx, shade(roof, 0.38), rx + 2, oy - 1, rw - 4, 2)
+  px(ctx, shade(roof, -0.5), rx, oy + roofH - 3, rw, 2)
+  px(ctx, shade(roof, -0.62), rx - 1, oy + roofH - 1, rw + 2, 1)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'
+  ctx.fillRect(ox + 1, oy + roofH, w - 2, 3)
   if (academy) {
-    // Purple roof, yellow trim, a clock and two banners: the school colors.
-    px(ctx, '#ffd23f', ox - 1, oy + roofH - 4, w + 2, 2)
-    px(ctx, C.outline, ox + w / 2 - 12, oy - 10, 24, 14); px(ctx, '#ffd23f', ox + w / 2 - 11, oy - 9, 22, 12)
-    px(ctx, C.outline, ox + w / 2 - 6, oy - 7, 12, 9); px(ctx, '#ffffff', ox + w / 2 - 5, oy - 6, 10, 7)
-    px(ctx, C.outline, ox + w / 2, oy - 5, 1, 3); px(ctx, C.outline, ox + w / 2, oy - 3, 3, 1)
-    for (let x = 8; x < w - 8; x += 16) { px(ctx, '#e8dcff', ox + x, oy + roofH + 2, 4, wallH - 5); px(ctx, '#c9b8f0', ox + x + 3, oy + roofH + 2, 1, wallH - 5) }
-    for (const bx of [ox + 6, ox + w - 14]) { px(ctx, C.outline, bx, oy + roofH + 2, 8, 14); px(ctx, '#6a2fb8', bx + 1, oy + roofH + 3, 6, 12); px(ctx, '#ffd23f', bx + 1, oy + roofH + 8, 6, 2) }
+    // Purple roof, yellow trim, a clock tower and banners: the school colors.
+    px(ctx, '#ffd23f', rx, oy + roofH - 5, rw, 2)
+    const cx = ox + w / 2
+    px(ctx, ink, cx - 13, oy - 14, 26, 18); px(ctx, '#ffd23f', cx - 12, oy - 13, 24, 16); px(ctx, '#e0b020', cx - 12, oy + 1, 24, 2)
+    px(ctx, ink, cx - 7, oy - 10, 14, 11); px(ctx, '#ffffff', cx - 6, oy - 9, 12, 9)
+    px(ctx, ink, cx, oy - 8, 1, 4); px(ctx, ink, cx, oy - 5, 3, 1)
+    px(ctx, ink, cx - 15, oy - 18, 30, 5); px(ctx, '#6a2fb8', cx - 14, oy - 17, 28, 3)
+    for (let x = 10; x < w - 10; x += 18) { px(ctx, '#e8dcff', ox + x, oy + roofH + 2, 5, wallH - 8); px(ctx, '#c9b8f0', ox + x + 4, oy + roofH + 2, 1, wallH - 8) }
+    for (const bx of [ox + 7, ox + w - 15]) { px(ctx, ink, bx, oy + roofH + 2, 8, 16); px(ctx, '#6a2fb8', bx + 1, oy + roofH + 3, 6, 14); px(ctx, '#ffd23f', bx + 1, oy + roofH + 9, 6, 2); px(ctx, '#6a2fb8', bx + 2, oy + roofH + 17, 4, 1) }
   }
-  // Windows with frames and flower boxes.
+  // Windows: frames, sky reflections, shutters and flower boxes.
   const slots = Math.max(1, Math.floor(building.w / 2))
   for (let i = 0; i < slots; i += 1) {
-    const wx = Math.round(ox + 5 + i * ((w - 10) / slots))
-    if (Math.abs(wx + 5 - (dx + 8)) < 12) continue
+    const wx = Math.round(ox + 6 + i * ((w - 12) / slots) + ((w - 12) / slots - 10) / 2)
+    if (Math.abs(wx + 5 - (dx + 8)) < 13) continue
     const wy = oy + roofH + 4
-    px(ctx, C.outline, wx, wy, 11, 10)
-    px(ctx, (frame + i) % 6 === 0 ? '#fff7c2' : '#ffe680', wx + 1, wy + 1, 9, 8)
-    px(ctx, '#ffffff', wx + 2, wy + 2, 2, 2)
-    px(ctx, C.outline, wx + 5, wy + 1, 1, 8); px(ctx, C.outline, wx + 1, wy + 4, 9, 1)
-    if (building.kind === 'house' || academy) { px(ctx, C.outline, wx - 1, wy + 10, 13, 3); px(ctx, '#8a5a2a', wx, wy + 10, 11, 2); px(ctx, '#ff5f8f', wx + 1, wy + 9, 2, 1); px(ctx, '#ffd23f', wx + 5, wy + 9, 2, 1); px(ctx, '#ff5f8f', wx + 8, wy + 9, 2, 1) }
+    if (building.kind === 'house') { px(ctx, shade(roof, -0.15), wx - 4, wy, 3, 10); px(ctx, shade(roof, -0.15), wx + 11, wy, 3, 10); px(ctx, shade(roof, 0.15), wx - 4, wy, 1, 10); px(ctx, shade(roof, 0.15), wx + 11, wy, 1, 10) }
+    px(ctx, ink, wx - 1, wy - 1, 12, 11)
+    px(ctx, '#fbf6ee', wx, wy, 10, 9)
+    const lit = (frame + i) % 7 === 0
+    px(ctx, lit ? '#fff2b0' : '#8fd0ff', wx + 1, wy + 1, 8, 7)
+    px(ctx, lit ? '#ffe080' : '#6fb4ec', wx + 1, wy + 5, 8, 3)
+    px(ctx, '#ffffff', wx + 2, wy + 2, 1, 2); px(ctx, '#ffffff', wx + 3, wy + 1, 1, 1)
+    px(ctx, '#fbf6ee', wx + 5, wy + 1, 1, 7); px(ctx, '#fbf6ee', wx + 1, wy + 4, 8, 1)
+    if (building.kind === 'house' || academy || building.kind === 'makerspace') {
+      px(ctx, ink, wx - 2, wy + 9, 14, 4); px(ctx, '#8a5a32', wx - 1, wy + 10, 12, 2)
+      for (const [fx, c] of [[0, '#ff5f8f'], [3, '#ffd23f'], [6, '#ffffff'], [9, '#ff5f8f']] as Array<[number, string]>) { px(ctx, '#3f9a46', wx - 1 + fx, wy + 9, 3, 1); px(ctx, c, wx + fx, wy + 8, 1, 1) }
+    }
   }
-  // Door with frame and step.
-  const doorColor = building.kind === 'station' ? '#e8483f' : building.kind === 'mart' ? '#3d7be0' : building.kind === 'lab' ? shade(building.roof, -0.2) : academy ? '#6a2fb8' : '#8a5a2a'
-  px(ctx, C.outline, dx + 2, oy + h - 15, 12, 15)
-  px(ctx, doorColor, dx + 3, oy + h - 14, 10, 12)
-  px(ctx, shade(doorColor, 0.25), dx + 3, oy + h - 14, 10, 1)
-  px(ctx, shade(doorColor, -0.25), dx + 7, oy + h - 13, 1, 11)
-  px(ctx, '#ffd23f', dx + 10, oy + h - 8, 1, 1)
-  px(ctx, '#b4a78e', dx + 1, oy + h - 2, 14, 2)
+  // Door: frame, planks, a knob, an awning and a lantern.
+  const doorColor = building.kind === 'station' ? '#e8483f' : building.kind === 'mart' ? '#3d7be0' : building.kind === 'lab' ? shade(building.roof, -0.2) : academy ? '#6a2fb8' : '#9a6232'
+  px(ctx, ink, dx + 1, oy + h - 17, 14, 17)
+  px(ctx, '#6e4424', dx + 2, oy + h - 16, 12, 16)
+  px(ctx, doorColor, dx + 3, oy + h - 15, 10, 13)
+  for (const lx of [dx + 5, dx + 8, dx + 11]) px(ctx, shade(doorColor, -0.18), lx, oy + h - 14, 1, 12)
+  px(ctx, shade(doorColor, 0.3), dx + 3, oy + h - 15, 10, 1)
+  px(ctx, '#bfe8ff', dx + 5, oy + h - 13, 6, 3)
+  px(ctx, '#ffd23f', dx + 11, oy + h - 8, 1, 2)
+  px(ctx, shade(roof, -0.6), dx - 1, oy + h - 20, 18, 4)
+  px(ctx, roof, dx, oy + h - 19, 16, 2)
+  px(ctx, shade(roof, 0.3), dx, oy + h - 19, 16, 1)
+  for (let x = 0; x < 16; x += 4) px(ctx, shade(roof, -0.3), dx + x + 1, oy + h - 17, 2, 1)
+  const glow = frame % 2 ? 0.32 : 0.26
+  ctx.fillStyle = `rgba(255, 220, 120, ${glow})`
+  ctx.beginPath(); ctx.arc(dx + 17, oy + h - 11, 5, 0, Math.PI * 2); ctx.fill()
+  px(ctx, ink, dx + 15, oy + h - 14, 4, 6); px(ctx, '#ffe680', dx + 16, oy + h - 13, 2, 4)
+  px(ctx, '#b4aea8', dx + 2, oy + h - 1, 12, 2)
   // Signs above the door.
-  if (building.kind === 'station') { px(ctx, C.outline, dx + 2, oy + roofH - 11, 12, 10); px(ctx, '#ffffff', dx + 3, oy + roofH - 10, 10, 8); px(ctx, '#e8483f', dx + 7, oy + roofH - 9, 2, 6); px(ctx, '#e8483f', dx + 5, oy + roofH - 7, 6, 2) }
-  if (building.kind === 'mart') { px(ctx, C.outline, dx - 1, oy + roofH - 11, 18, 10); px(ctx, '#ffffff', dx, oy + roofH - 10, 16, 8); pixelText(ctx, 'MART', dx + 1, oy + roofH - 8, '#3d7be0') }
+  if (building.kind === 'station') { px(ctx, ink, dx + 2, oy + roofH - 12, 12, 11); px(ctx, '#ffffff', dx + 3, oy + roofH - 11, 10, 9); px(ctx, '#e8483f', dx + 7, oy + roofH - 10, 2, 7); px(ctx, '#e8483f', dx + 5, oy + roofH - 8, 6, 3) }
+  if (building.kind === 'mart') { px(ctx, ink, dx - 2, oy + roofH - 12, 20, 11); px(ctx, '#ffffff', dx - 1, oy + roofH - 11, 18, 9); pixelText(ctx, 'MART', dx + 1, oy + roofH - 9, '#3d7be0') }
   if (building.label) {
     const size = academy ? 2 : 1
     const textW = building.label.length * 4 * size - size
-    const ly = academy ? oy + roofH - 17 : oy + roofH - 10
+    const ly = academy ? oy + roofH - 19 : oy + roofH - 12
     const lx = ox + Math.floor((w - textW) / 2)
-    px(ctx, C.outline, lx - 4, ly - 3, textW + 8, 5 * size + 6)
+    px(ctx, ink, lx - 4, ly - 3, textW + 8, 5 * size + 6)
     px(ctx, academy ? '#6a2fb8' : '#2b2230', lx - 3, ly - 2, textW + 6, 5 * size + 4)
-    if (academy) px(ctx, '#ffd23f', lx - 3, ly + 5 * size + 1, textW + 6, 1)
+    px(ctx, academy ? '#ffd23f' : '#5a4a6a', lx - 3, ly - 2, textW + 6, 1)
     pixelText(ctx, building.label, lx, ly, academy ? '#ffd23f' : '#ffffff', size)
   }
   if (building.kind === 'makerspace') {
     const gx = ox + 10
-    const gy = oy + 4
-    px(ctx, C.outline, gx - 1, gy + 1, 12, 8); px(ctx, C.outline, gx + 1, gy - 1, 8, 12)
-    px(ctx, '#ffd23f', gx, gy + 2, 10, 6); px(ctx, '#ffd23f', gx + 2, gy, 6, 10); px(ctx, '#f28c28', gx + 3, gy + 3, 4, 4); px(ctx, C.outline, gx + 4, gy + 4, 2, 2)
+    const gy = oy + 6
+    px(ctx, ink, gx - 1, gy + 1, 12, 8); px(ctx, ink, gx + 1, gy - 1, 8, 12)
+    px(ctx, '#ffd23f', gx, gy + 2, 10, 6); px(ctx, '#ffd23f', gx + 2, gy, 6, 10); px(ctx, '#f28c28', gx + 3, gy + 3, 4, 4); px(ctx, ink, gx + 4, gy + 4, 2, 2)
   }
 }

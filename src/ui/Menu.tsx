@@ -12,6 +12,7 @@ import type { OwnedPyxie, SaveState } from '../types'
 import { avatarLook } from '../world/looks'
 import { mapById } from '../world/maps'
 import { BadgeIcon } from './Badge'
+import { PyxieInspector } from './PyxieInspector'
 import { Bar, ConceptTag, ItemIcon, PersonImg, PyxieImg } from './Sprite'
 
 type Tab = 'team' | 'codex' | 'bag' | 'card' | 'map' | 'options'
@@ -74,9 +75,14 @@ function PyxieDetail({ pyxie, lead, change }: { pyxie: OwnedPyxie; lead: boolean
     const clean = name.replace(/[^\p{L}\p{N} !?-]/gu, '').trim().slice(0, 12)
     change((s) => replacePyxie(s, { ...pyxie, nickname: clean || null }))
   }
+  const [inspect, setInspect] = useState(false)
   return <div className="pyxie-detail">
+    {inspect && <PyxieInspector species={pyxie.species} shiny={pyxie.shiny} pyxie={pyxie} onClose={() => setInspect(false)} />}
     <div className="pyxie-detail__hero" style={{ '--c': concepts[species.concept].color } as CSSProperties}>
-      <PyxieImg species={pyxie.species} shiny={pyxie.shiny} size={128} />
+      <button className="pyxie-detail__look" onClick={() => setInspect(true)} aria-label={`Look at ${displayName(pyxie)} up close`}>
+        <PyxieImg species={pyxie.species} shiny={pyxie.shiny} size={150} />
+        <span>🔍 LOOK CLOSER</span>
+      </button>
       <div>
         <h3>{displayName(pyxie)} {pyxie.shiny && <span title="Golden pyxie">✨</span>}</h3>
         <p>#{String(species.dex).padStart(3, '0')} {species.name} · Lv{pyxie.level}</p>
@@ -112,7 +118,7 @@ function CodexTab({ save }: { save: SaveState }) {
         <b>{seen ? s.name : '???'}</b>
       </button>
     })}</div>
-    {species && <div className="codex__entry"><PyxieImg species={species.id} size={96} /><div><h3>{species.name}{species.legendary && ' ★'}</h3><ConceptTag concept={species.concept} /><p>{save.caught.includes(species.id) ? species.entry : 'Catch it to read its full entry.'}</p><small>Habitat: {species.habitat}</small></div></div>}
+    {species && <PyxieInspector species={species.id} mystery={!save.caught.includes(species.id)} onClose={() => setOpen(null)} />}
   </div>
 }
 
