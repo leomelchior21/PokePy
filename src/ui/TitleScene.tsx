@@ -387,8 +387,8 @@ export function TitleScene() {
   return <canvas ref={ref} className="title__scene" aria-hidden="true" />
 }
 
-/** The pixel logo, scaled by whole pixels so every block stays square. */
-export function Logo() {
+/** The pixel logo, scaled by whole pixels so every block stays square. Compact leaves room for a card below. */
+export function Logo({ compact = false }: { compact?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const canvas = ref.current
@@ -396,7 +396,7 @@ export function Logo() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     const size = () => {
-      const k = Math.max(4, Math.floor(Math.min(window.innerWidth * 0.84, 700, window.innerHeight * 0.8) / LOGO_W))
+      const k = Math.max(3, Math.floor(Math.min(window.innerWidth * 0.84, compact ? 420 : 700, window.innerHeight * (compact ? 0.42 : 0.8)) / LOGO_W))
       canvas.style.width = `${LOGO_W * k}px`
       canvas.style.height = `${LOGO_H * k}px`
     }
@@ -407,6 +407,6 @@ export function Logo() {
     const tick = (now: number) => { drawLogo(ctx, (now - start) / 1000); frame = requestAnimationFrame(tick) }
     frame = requestAnimationFrame(tick)
     return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', size) }
-  }, [])
+  }, [compact])
   return <canvas ref={ref} className="logo-art" width={LOGO_W} height={LOGO_H} aria-hidden="true" />
 }

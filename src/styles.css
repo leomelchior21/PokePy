@@ -41,13 +41,14 @@ code, pre { font-family: var(--mono); }
 .btn--attack { min-width: 140px; font-family: var(--ui); font-weight: 900; font-size: 19px; letter-spacing: 0.04em; background: linear-gradient(var(--yellow), #ffb800); }
 
 /* ---------- Title ---------- */
-.title { position: relative; display: grid; place-items: start center; height: 100%; overflow: hidden auto; background: #12082a; }
+.title { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; align-items: start; height: 100%; overflow: hidden auto; background: #12082a; }
 .title.is-maker { animation: rainbow 2.4s linear infinite; }
 @keyframes rainbow { to { filter: hue-rotate(360deg); } }
 @keyframes drift { from { left: -200px; } to { left: 110%; } }
-.title__scene { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); image-rendering: pixelated; pointer-events: none; }
-.title__shade { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 45% at 50% 26%, rgba(18, 8, 42, 0.45), rgba(18, 8, 42, 0) 70%); }
-.title__content { position: relative; z-index: 2; display: grid; justify-items: center; gap: 14px; width: min(620px, 94vw); margin-top: clamp(24px, 8vh, 96px); padding-bottom: 130px; text-align: center; }
+/* The scene and its shade are pinned to the window, so they still fill it when a tall card scrolls. */
+.title__scene { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); image-rendering: pixelated; pointer-events: none; }
+.title__shade { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 45% at 50% 26%, rgba(18, 8, 42, 0.45), rgba(18, 8, 42, 0) 70%); }
+.title__content { position: relative; z-index: 2; display: grid; justify-items: center; gap: 14px; width: min(620px, 94vw); margin-top: clamp(14px, 7vh, 96px); padding-bottom: 20px; text-align: center; }
 .logo { margin: 0; line-height: 0; filter: drop-shadow(0 0 28px rgba(255, 180, 90, 0.4)); animation: logo-in 0.9s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
 .logo-art { display: block; image-rendering: pixelated; }
 @keyframes logo-in { from { transform: translateY(-40px) scale(0.7); opacity: 0; } }
@@ -64,7 +65,7 @@ code, pre { font-family: var(--mono); }
 .title__hint { margin: 0; padding: 6px 14px; border-radius: 999px; background: rgba(18, 8, 42, 0.55); color: var(--yellow-soft); font: 800 16px var(--ui); white-space: nowrap; }
 @keyframes blink { 50% { opacity: 0.25; } }
 .title__loading { padding: 8px 18px; border-radius: 999px; background: rgba(18, 8, 42, 0.7); font: 900 18px var(--ui); animation: blink 0.8s steps(2) infinite; }
-.title__foot { position: absolute; bottom: 12px; left: 50%; z-index: 2; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(18, 8, 42, 0.6); color: var(--yellow-soft); font: 800 15px var(--ui); white-space: nowrap; }
+.title__foot { position: relative; z-index: 2; margin: 8px 0 12px; padding: 6px 14px; border-radius: 999px; background: rgba(18, 8, 42, 0.6); color: var(--yellow-soft); font: 800 15px var(--ui); white-space: nowrap; }
 .login-card { display: grid; gap: 10px; width: min(420px, 92vw); padding: 20px; border: 4px solid var(--ink); border-radius: 14px; color: var(--ink); background: var(--paper); box-shadow: 0 8px 0 var(--purple-dark); text-align: left; }
 .login-card label { font: 900 15px var(--ui); color: var(--purple); }
 .login-card input { padding: 12px; border: 3px solid var(--ink); border-radius: 8px; color: var(--ink); background: #fff; font: 700 20px var(--mono); }

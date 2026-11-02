@@ -75,9 +75,9 @@ export function Title({ onStart }: { onStart: (save: SaveState) => void }) {
     <div className="title__shade" aria-hidden="true" />
 
     <div className="title__content">
-      <h1 className="logo" aria-label="Pyxies"><Logo /></h1>
+      <h1 className="logo" aria-label="Pyxies"><Logo compact={stage !== 'splash'} /></h1>
       <div className="title__ribbon"><span>A PYTHON ADVENTURE</span></div>
-      <p className="title__tag">in the Castanho Valley</p>
+      {stage === 'splash' && <p className="title__tag">in the Castanho Valley</p>}
       {maker && <p className="title__secret">🛠 Leo Maker approves. Keep building! 🛠</p>}
 
       {stage === 'splash' && <button className="press-start" onClick={begin}>▶ PRESS START</button>}
