@@ -147,6 +147,8 @@ export const scripts: Record<string, Script> = {
       : save.badges.length === 0 ? 'Echo Harbor is north. Marina Echo runs the first Lab: print() is her specialty.'
       : `${save.badges.length} badges already! Keep going. Every Master teaches something new.`
     await ctx.ui.say([tip, 'Let me plug your pyxies into the charger.'], 'Leo Maker')
+    // A running joke across the valley: everyone knows Leo Maker is afraid of fish. Except Leo.
+    if (save.badges.length > 0 && ctx.rng.chance(0.35)) await ctx.ui.say(['Oh, and if anyone in Echo Harbor tells you I\'m afraid of fish…', 'That is NOT true. I simply respect their personal space.', 'From very, very far away.'], 'Leo Maker')
     ctx.set((current) => ({ ...healTeam(current), respawn: { map: 'makerspace', x: 7, y: 5 } }))
     ctx.ui.sfx('heal')
   },
@@ -159,7 +161,20 @@ export const scripts: Record<string, Script> = {
   'arduino-bench': async (ctx) => ctx.ui.say(['An Arduino blinks the LED on pin 13. ON. OFF. ON. OFF.', 'Someone wrote on the bench: "Hello World, but with lights."']),
   'laser-cutter': async (ctx) => ctx.ui.say(['The laser cutter. A sign says: MEASURE TWICE, CUT ONCE.', 'Never leave a laser cutter alone while it\'s cutting!']),
   'lab-screen': async (ctx) => ctx.ui.say(['print("Hello, Makerspace!")', 'The screen shows the program that hatched the pyxies. It ends with a smiley face.']),
-  'lab-shelf': async (ctx) => ctx.ui.say(['Shelves full of cardboard, hot glue sticks, LEDs, servo motors and one rubber duck.', 'The duck looks wise.']),
+  'lab-shelf': async (ctx) => ctx.ui.say(['Shelves full of cardboard, hot glue sticks, LEDs, servo motors and one rubber duck.', 'The duck looks wise.', 'A sticky note: "NO FISH. NOT EVEN DRAWINGS OF FISH. - L.M."']),
+
+  'fish-quiz': async (ctx) => {
+    const who = 'Marine Biologist'
+    await ctx.ui.say(['I study the fish of Echo Harbor. Wonderful creatures!', 'Pop quiz, maker! Do you know what ICHTHYOPHOBIA means?'], who)
+    const pick = await ctx.ui.choose('Ichthyophobia is the fear of…', ['Fish', 'Python errors', 'Pizza'], who)
+    if (pick === 0) {
+      ctx.ui.sfx('right')
+      await ctx.ui.say(['Correct! The fear of fish. "Ichthys" is the Greek word for fish.', 'Leo Maker has it. BIG time.', 'He once saw a goldfish at the fair and hid behind a 3D printer for an hour.', 'You did not hear that from me.'], who)
+    } else {
+      ctx.ui.sfx('wrong')
+      await ctx.ui.say(['Nope! It is the fear of FISH. "Ichthys" is the Greek word for fish.', 'Want an example? Leo Maker. Say "sardine" near him and watch him turn pale.'], who)
+    }
+  },
 
   basement: async (ctx) => {
     await ctx.ui.say(['A hatch in the floor. A ladder goes down into the dark…'])

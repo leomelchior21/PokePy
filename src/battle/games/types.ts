@@ -9,6 +9,8 @@ export interface Controls {
   down: boolean
   /** Counts every tap or Space press, so a game can react to each one once. */
   taps: number
+  /** Screen pixels per game pixel: games grow on big screens, so the pointer is divided by it. */
+  scale: number
 }
 
 export interface GameProps<C> {

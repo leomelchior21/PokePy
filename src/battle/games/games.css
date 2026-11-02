@@ -5,7 +5,7 @@
 .mini__body.has-code { grid-template-columns: minmax(220px, 34%) minmax(0, 1fr); }
 @media (max-width: 760px), (max-aspect-ratio: 1/1) { .mini__body.has-code { grid-template-columns: none; grid-template-rows: auto minmax(0, 1fr); } }
 .mini__code { display: grid; align-content: start; gap: 6px; min-height: 0; overflow: auto; }
-.mini__code > small { font: 900 12px var(--ui); color: var(--purple); letter-spacing: 0.08em; }
+.mini__code > small { font: 900 13px var(--ui); color: var(--purple); letter-spacing: 0.08em; }
 .mini__code .cv-code__line.is-hot { border-color: var(--yellow); background: rgba(255, 210, 63, 0.18); box-shadow: inset 4px 0 0 var(--yellow); }
 .mini__code .cv-code__line.is-done { background: rgba(95, 209, 122, 0.12); }
 .mini__note { margin-left: auto; padding-left: 10px; color: #8ee6a0; font: 700 13px var(--mono); white-space: nowrap; }
@@ -31,7 +31,7 @@
 .match__board { position: absolute; left: 50%; top: 50%; width: calc(var(--n) * var(--cell) + (var(--n) + 1) * 6px); height: calc(var(--n) * var(--cell) + (var(--n) + 1) * 6px); transform: translate(-50%, -50%); border: 3px solid var(--ink); border-radius: 12px; background: rgba(22, 10, 46, 0.6); }
 .match__tile { position: absolute; left: calc(6px + var(--x) * (var(--cell) + 6px)); top: calc(6px + var(--y) * (var(--cell) + 6px)); width: var(--cell); height: var(--cell); display: grid; place-items: center; padding: 2px; border: 3px solid var(--ink); border-radius: 10px; color: var(--ink); background: linear-gradient(#fffaf0, #f1e6d2); box-shadow: 0 3px 0 var(--ink); transition: left 0.22s ease, top 0.26s cubic-bezier(0.3, 1.4, 0.6, 1), transform 0.15s, background 0.15s; touch-action: none; }
 .match__tile code { font: 800 16px/1 var(--mono); white-space: nowrap; text-align: center; }
-.match__tile em { position: absolute; inset: auto -4px -10px; padding: 1px 3px; border: 2px solid var(--ink); border-radius: 6px; background: var(--yellow); font: 900 12px var(--mono); font-style: normal; text-align: center; white-space: nowrap; overflow: hidden; z-index: 2; }
+.match__tile em { position: absolute; inset: auto -4px -10px; padding: 1px 3px; border: 2px solid var(--ink); border-radius: 6px; background: var(--yellow); font: 900 13px var(--mono); font-style: normal; text-align: center; white-space: nowrap; overflow: hidden; z-index: 2; }
 .match__tile.is-selected { background: linear-gradient(#fff3a8, var(--yellow)); transform: scale(1.08); z-index: 3; }
 .match__tile.is-hint { animation: pulse 0.9s infinite; }
 .match__tile.is-pop { background: linear-gradient(#c9f7d2, #5fd17a); animation: pop 0.5s ease forwards; z-index: 2; }
@@ -47,8 +47,8 @@
 .blocks__program { display: grid; align-content: start; gap: 4px; padding: 8px; border: 3px solid var(--ink); border-radius: 10px; background: #161226; }
 .blocks__line { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 4px 8px; border: 2px solid transparent; border-radius: 7px; color: #f3eefc; background: transparent; text-align: left; font: 700 16px var(--mono); }
 .blocks__line code { white-space: pre; }
-.blocks__n { width: 16px; color: #6b6280; font-size: 12px; text-align: right; }
-.blocks__indent { flex: none; color: #6b6280; font-size: 12px; text-align: right; }
+.blocks__n { width: 16px; color: #6b6280; font-size: 13px; text-align: right; }
+.blocks__indent { flex: none; color: #6b6280; font-size: 13px; text-align: right; }
 .blocks__line.is-fixed { opacity: 0.85; }
 .blocks__line.is-slot { border: 2px dashed #5a4a8a; background: rgba(255, 255, 255, 0.03); cursor: pointer; }
 .blocks__line.is-slot em { color: #8a80a0; font: 700 13px var(--ui); font-style: italic; }
@@ -72,4 +72,4 @@
 .blocks__bottom { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
 .blocks__console { min-height: 56px; max-height: 110px; margin: 0; padding: 8px 10px; overflow: auto; border: 3px solid var(--ink); border-radius: 10px; background: #0b0816; color: #8ee6a0; font: 700 14px/1.35 var(--mono); white-space: pre-wrap; }
 .blocks__actions { display: flex; align-items: center; gap: 8px; }
-.blocks__actions small { color: #c9b8f0; font: 800 12px var(--ui); }
+.blocks__actions small { color: #c9b8f0; font: 800 13px var(--ui); }

@@ -37,7 +37,7 @@ export const miniLabel: Record<MiniKind, string> = {
 /** A choice question whose options fit on a falling bubble or a tower sign. */
 function compactChoice(concept: Concept, tier: Tier, rng: Rng, maxLines: number): ChoiceChallenge {
   let best: ChoiceChallenge | null = null
-  for (let tries = 0; tries < 40; tries += 1) {
+  for (let tries = 0; tries < 80; tries += 1) {
     const candidate = choiceFor(concept, tier, rng)
     best = candidate
     if (candidate.options.every((option) => option.split('\n').length <= maxLines && option.length <= 26)) return candidate
@@ -55,7 +55,8 @@ function catchGame(concept: Concept, tier: Tier, rng: Rng): CatchChallenge {
 }
 
 function slingGame(concept: Concept, tier: Tier, rng: Rng): SlingChallenge {
-  const source = compactChoice(concept, tier, rng, 2)
+  // One printed line per sign: a sign that wraps reads like two answers on an iPad.
+  const source = compactChoice(concept, tier, rng, 1)
   const code = source.focus ? [...source.code, `print(${source.focus})`] : source.code
   return {
     kind: 'sling', concept, tier, code, focus: source.focus, options: source.options, answer: source.answer, shots: 3,

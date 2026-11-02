@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { displayName, levelProgress, statsFor, xpForLevel } from '../battle/engine'
+import { isMini, miniLabel } from '../battle/minigames'
 import { conceptOrder, concepts } from '../data/concepts'
 import { items } from '../data/items'
 import { getMove } from '../data/moves'
@@ -94,7 +95,7 @@ function PyxieDetail({ pyxie, lead, change }: { pyxie: OwnedPyxie; lead: boolean
     </div>
     <ul className="move-list">{pyxie.moves.map((id) => {
       const move = getMove(id)
-      return <li key={id} style={{ '--c': concepts[move.concept].color } as CSSProperties}><b>{move.name}</b><small>{concepts[move.concept].glyph} {concepts[move.concept].label} · {move.kind.toUpperCase()} · PWR {move.power}</small><p>{move.text}</p></li>
+      return <li key={id} style={{ '--c': concepts[move.concept].color } as CSSProperties}><b>{move.name}</b><small>{concepts[move.concept].glyph} {concepts[move.concept].label} · PWR {move.power}</small><small>{isMini(move.kind) ? `🎮 ${miniLabel[move.kind]}` : move.kind.toUpperCase()}</small><p>{move.text}</p></li>
     })}</ul>
     <p className="pyxie-detail__entry">{species.entry}</p>
     <div className="pyxie-detail__actions">

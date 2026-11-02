@@ -66,7 +66,8 @@ describe('a battle through the screen', () => {
     const onEnd = vi.fn()
     render(<BattleHarness onEnd={onEnd} />)
     // Click whatever the battle asks for, answering every challenge with its first option.
-    for (let i = 0; i < 160 && !onEnd.mock.calls.length; i += 1) {
+    // Battles are random and the first option is often wrong, so allow plenty of turns.
+    for (let i = 0; i < 450 && !onEnd.mock.calls.length; i += 1) {
       await act(async () => { await new Promise((r) => setTimeout(r, 60)) })
       const message = document.querySelector('.battle__msg')
       if (message) { fireEvent.click(message); continue }

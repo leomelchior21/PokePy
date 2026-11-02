@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { audio } from '../../engine/audio'
 import type { JumpChallenge } from '../minigames'
-import { burst, confetti, drawParticles, hearts, INK, roundRect, stepParticles, tag, text, textWidth, timerBar, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
+import { burst, confetti, drawParticles, hearts, hint, INK, roundRect, stepParticles, tag, text, textWidth, timerBar, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
 import type { GameProps } from './types'
 
 const GRAVITY = 1150
@@ -32,6 +32,7 @@ export function JumpGame({ challenge, accent, hero, started, onFinish, controls 
     s.y = 0
   }
   const loop = useRef<Loop>({
+    fit: { w: 460, h: 520 },
     update: (dt, w, h) => {
       const s = state.current
       s.t += dt
@@ -103,7 +104,7 @@ export function JumpGame({ challenge, accent, hero, started, onFinish, controls 
       const screenY = (height: number) => h - 60 - (height - s.cam)
       // Floor.
       const fy = screenY(0)
-      if (fy < h + 40) { roundRect(ctx, -10, fy, w + 20, 80, 0, '#5aa646', INK, 3); text(ctx, 'START', w / 2, fy + 22, 14, '#ffffff') }
+      if (fy < h + 40) { roundRect(ctx, -10, fy, w + 20, 80, 0, '#5aa646', INK, 3); text(ctx, 'START', w / 2, fy + 22, 16, '#ffffff') }
       for (const pad of s.pads) {
         const y = screenY(pad.row * ROW) + pad.fall * pad.fall * 400
         if (y < -40 || y > h + 60) continue
@@ -113,7 +114,7 @@ export function JumpGame({ challenge, accent, hero, started, onFinish, controls 
         roundRect(ctx, pad.x, y, pad.w, 30, 10, fill)
         ctx.fillStyle = pad.state === 'idle' ? accent : 'transparent'; ctx.fillRect(pad.x + 6, y + 24, pad.w - 12, 3)
         text(ctx, pad.expr, pad.x + pad.w / 2, y + 14, 16)
-        if (pad.state !== 'idle') text(ctx, pad.state === 'true' ? 'True' : 'False', pad.x + pad.w / 2, y - 12, 13, pad.state === 'true' ? '#1e6a34' : '#a1253d')
+        if (pad.state !== 'idle') text(ctx, pad.state === 'true' ? 'True' : 'False', pad.x + pad.w / 2, y - 13, 16, pad.state === 'true' ? '#1e6a34' : '#a1253d')
         ctx.globalAlpha = 1
       }
       const py = screenY(s.y)
@@ -126,9 +127,9 @@ export function JumpGame({ challenge, accent, hero, started, onFinish, controls 
       timerBar(ctx, 100, 16, Math.min(220, w - 240), s.time / challenge.seconds)
       text(ctx, `${s.best}/${challenge.rows.length}`, w - 40, 22, 16, INK)
       if (s.messageT > 0) tag(ctx, s.message, w / 2, 56, 16, s.good ? '#c9f7d2' : '#ffd0d8')
-      if (started.current && s.best === 0 && !s.done) text(ctx, '← → or drag to steer', w / 2, h - 18, 13, '#ffffff')
+      if (started.current && s.best === 0 && !s.done) hint(ctx, '← → or drag to steer', w / 2, h - 22, 15)
     },
   })
-  useCanvasLoop(canvas, loop)
+  useCanvasLoop(canvas, loop, controls)
   return <canvas ref={canvas} className="mini__canvas" aria-label="True Jump: land only on True platforms" />
 }

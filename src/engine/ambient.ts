@@ -10,7 +10,10 @@ export interface View { x: number; y: number; w: number; h: number }
 
 interface Bird { x: number; y: number; z: number; vx: number; vy: number; vz: number; state: 'ground' | 'fly'; t: number; color: string; peck: number }
 interface Flyer { kind: 'butterfly' | 'leaf' | 'firefly'; x: number; y: number; t: number; vx: number; vy: number; color: string; seed: number }
-interface Puff { x: number; y: number; r: number; life: number; max: number; vx: number; vy: number; color: string; kind: 'smoke' | 'dust' | 'leaf' | 'ripple' | 'sparkle' }
+interface Puff { x: number; y: number; r: number; life: number; max: number; vx: number; vy: number; color: string; kind: 'smoke' | 'dust' | 'leaf' | 'ripple' | 'sparkle' | 'blade' | 'sand' }
+/** A footprint the player leaves behind: pressed grass, a dirt smudge, a print in the sand. */
+interface Print { x: number; y: number; life: number; max: number; kind: Ground }
+export type Ground = 'grass' | 'dirt' | 'sand'
 interface Cloud { x: number; y: number; rx: number; ry: number; v: number }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -25,6 +28,9 @@ export class Ambient {
   private clouds: Cloud[] = []
   private chimneys: Array<{ x: number; y: number; t: number }> = []
   private birdTimer = 0
+  private prints: Print[] = []
+  /** Tall-grass tiles still shaking after someone pushed through them, in ms left. */
+  private rustles = new Map<string, number>()
   private time = 0
   private outdoor: boolean
 
@@ -53,14 +59,31 @@ export class Ambient {
     return null
   }
 
-  burst(kind: 'dust' | 'leaf' | 'sparkle', x: number, y: number, count = 3) {
+  burst(kind: 'dust' | 'leaf' | 'sparkle' | 'blade' | 'sand', x: number, y: number, count = 3) {
     for (let i = 0; i < count; i += 1) {
-      const leaf = kind === 'leaf'
+      const leaf = kind === 'leaf' || kind === 'blade'
+      const color = kind === 'leaf' ? (Math.random() < 0.5 ? '#5aa646' : '#86cb5e') : kind === 'blade' ? (Math.random() < 0.5 ? '#7cc25a' : '#b9ec92') : kind === 'sand' ? (Math.random() < 0.5 ? '#e6cc86' : '#f7e8b8') : kind === 'sparkle' ? '#fff6b0' : 'rgba(230, 210, 170, 0.7)'
       this.puffs.push({
-        x: x + rand(-4, 4), y: y + rand(-3, 1), r: leaf ? 1 : rand(1.5, 3), life: 0, max: leaf ? rand(400, 700) : rand(300, 500),
-        vx: rand(-20, 20), vy: leaf ? rand(-40, -20) : rand(-12, -4), kind, color: leaf ? (Math.random() < 0.5 ? '#5aa646' : '#86cb5e') : kind === 'sparkle' ? '#fff6b0' : 'rgba(230, 210, 170, 0.7)',
+        x: x + rand(-4, 4), y: y + rand(-3, 1), r: leaf ? 1 : rand(1.5, 3), life: 0, max: leaf || kind === 'sand' ? rand(320, 560) : rand(300, 500),
+        vx: rand(-20, 20), vy: leaf || kind === 'sand' ? rand(-40, -18) : rand(-12, -4), kind, color,
       })
     }
+  }
+
+  /** Leaves a footprint that fades: sand keeps it longest, grass springs back fast. */
+  footprint(kind: Ground, x: number, y: number) {
+    this.prints.push({ x: Math.round(x), y: Math.round(y), life: 0, max: kind === 'sand' ? 7000 : kind === 'dirt' ? 3500 : 1600, kind })
+    if (this.prints.length > 60) this.prints.shift()
+  }
+
+  /** Shakes a tall-grass tile for a moment. */
+  rustle(tx: number, ty: number) {
+    this.rustles.set(`${tx},${ty}`, 520)
+  }
+
+  /** How hard a tall-grass tile is shaking right now, from 0 to 1. */
+  rustleAt(tx: number, ty: number): number {
+    return (this.rustles.get(`${tx},${ty}`) ?? 0) / 520
   }
 
   update(dt: number, view: View, player: { x: number; y: number }) {
@@ -152,13 +175,25 @@ export class Ambient {
       p.life += dt
       p.x += p.vx * s; p.y += p.vy * s
       if (p.kind === 'smoke') p.r += s * 2.2
-      if (p.kind === 'leaf') p.vy += 90 * s
+      if (p.kind === 'leaf' || p.kind === 'blade' || p.kind === 'sand') p.vy += (p.kind === 'leaf' ? 90 : 160) * s
     }
+    for (const print of this.prints) print.life += dt
+    this.prints = this.prints.filter((print) => print.life < print.max)
+    for (const [key, left] of this.rustles) { if (left - dt <= 0) this.rustles.delete(key); else this.rustles.set(key, left - dt) }
     this.puffs = this.puffs.filter((p) => p.life < p.max)
   }
 
   /** Under everything that stands: bird shadows and ripples. */
   drawGround(ctx: Ctx) {
+    for (const print of this.prints) {
+      const fade = 1 - print.life / print.max
+      // A small oval pressed into the ground, with a lit rim on its lower edge.
+      ctx.fillStyle = print.kind === 'sand' ? `rgba(150, 108, 48, ${0.75 * fade})` : print.kind === 'dirt' ? `rgba(104, 68, 36, ${0.7 * fade})` : `rgba(38, 104, 40, ${0.6 * fade})`
+      ctx.fillRect(print.x, print.y - 1, 2, 3)
+      ctx.fillRect(print.x - 1, print.y, 1, 1); ctx.fillRect(print.x + 2, print.y, 1, 1)
+      ctx.fillStyle = print.kind === 'grass' ? `rgba(200, 240, 160, ${0.5 * fade})` : `rgba(255, 248, 220, ${0.6 * fade})`
+      ctx.fillRect(print.x, print.y + 2, 2, 1)
+    }
     ctx.fillStyle = 'rgba(20, 20, 40, 0.18)'
     for (const bird of [...this.birds, ...this.flock]) {
       if (bird.z <= 1) continue
@@ -183,8 +218,8 @@ export class Ambient {
     for (const p of this.puffs) {
       const k = p.life / p.max
       if (p.kind === 'smoke') { ctx.fillStyle = `rgba(242, 238, 246, ${0.55 * (1 - k)})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill() }
-      if (p.kind === 'dust') { ctx.fillStyle = `rgba(232, 214, 176, ${0.7 * (1 - k)})`; ctx.fillRect(Math.round(p.x), Math.round(p.y), Math.ceil(p.r * (1 - k * 0.5)), Math.ceil(p.r * (1 - k * 0.5))) }
-      if (p.kind === 'leaf') { ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 1) }
+      if (p.kind === 'dust') { ctx.fillStyle = `rgba(250, 240, 214, ${0.85 * (1 - k)})`; ctx.fillRect(Math.round(p.x), Math.round(p.y), Math.ceil(p.r * (1 - k * 0.5)), Math.ceil(p.r * (1 - k * 0.5))) }
+      if (p.kind === 'leaf' || p.kind === 'blade' || p.kind === 'sand') { ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x), Math.round(p.y), p.kind === 'blade' ? 1 : 2, p.kind === 'blade' ? 2 : 1) }
       if (p.kind === 'sparkle') { ctx.fillStyle = `rgba(255, 246, 176, ${1 - k})`; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1) }
     }
     for (const bird of this.birds) if (bird.state === 'fly') drawBird(ctx, bird.x, bird.y - bird.z, bird.color, Math.floor(this.time / 90) % 2 ? 'up' : 'down', false)

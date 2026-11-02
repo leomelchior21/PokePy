@@ -11,6 +11,7 @@ import { Ambient, type View } from '../engine/ambient'
 import { makeCanvas } from '../engine/pixels'
 import { boulderCanvas, bushCanvas, drawFence, TREE_SIZE, tallGrassCanvas, treeCanvas, treeKindFor } from '../engine/props'
 import { buildGround, hash, isOutdoor } from '../engine/terrain'
+import { drawScreenTile, drawSunbeams } from '../engine/interior'
 import { drawBuilding, drawTile } from '../engine/tiles'
 import type { Direction, SaveState } from '../types'
 import { randomRng, type Rng } from '../lib/rng'
@@ -84,6 +85,8 @@ export class WorldRuntime {
   private hint: { x: number; y: number } | null = null
   private lastBump = 0
   private dustTimer = 0
+  private stride = 0
+  private lastRustle = 0
   private frameDt = 16
   private buffer: HTMLCanvasElement | null = null
 
@@ -359,10 +362,41 @@ export class WorldRuntime {
       this.dustTimer -= dt
       if (this.dustTimer <= 0) { this.dustTimer = 140; this.ambient.burst('dust', this.px, this.py + 2, 1) }
     }
+    const stride = Math.floor(this.walked / 12)
+    if (stride !== this.stride) { this.stride = stride; this.footstep(run) }
     this.checkEdge()
     const tx = Math.floor(this.px / 16)
     const ty = Math.floor(this.py / 16)
     if (tx !== this.x || ty !== this.y) this.enterTile(tx, ty)
+  }
+
+  /** The ground answers every step: grass parts and shakes, dust and sand kick up, prints stay behind. */
+  private footstep(run: boolean) {
+    const tx = Math.floor(this.px / 16)
+    const ty = Math.floor(this.py / 16)
+    const t = tileAt(this.map, tx, ty)
+    // Left foot, right foot: prints sit a little to each side of the path.
+    const [fx, fy] = unit[this.facing]
+    const side = this.stride % 2 ? 3 : -3
+    const footX = this.px + (fy !== 0 ? side : 0) - 1
+    const footY = this.py + 1 + (fx !== 0 ? side / 2 : 0)
+    if (t === ',') {
+      this.ambient.rustle(tx, ty)
+      this.ambient.burst('blade', this.px, this.py - 3, run ? 3 : 2)
+      if (this.time - this.lastRustle > 260) { this.lastRustle = this.time; this.hooks.sfx('rustle') }
+    } else if (t === '.' || t === 'f') {
+      this.ambient.footprint('grass', footX, footY)
+      if (this.stride % 3 === 0 || run) this.ambient.burst('blade', this.px, this.py, 1)
+      this.hooks.sfx('step-grass')
+    } else if (t === 's') {
+      this.ambient.footprint('sand', footX, footY)
+      this.ambient.burst('sand', this.px, this.py, run ? 3 : 2)
+      this.hooks.sfx('step-dirt')
+    } else if (t === ':' || t === 'c') {
+      this.ambient.footprint('dirt', footX, footY)
+      this.ambient.burst('dust', this.px, this.py + 1, run ? 2 : 1)
+      this.hooks.sfx('step-dirt')
+    } else if (t !== '~') this.hooks.sfx('step-floor')
   }
 
   /** Walking off the side of the map onto the next one. */
@@ -562,6 +596,7 @@ export class WorldRuntime {
         drawTile(ctx, this.map, x, y, (x + PAD) * 16, (y + PAD) * 16, 0, flags)
       }
       for (const building of this.map.buildings ?? []) drawBuilding(ctx, building, (building.x + PAD) * 16, (building.y + PAD) * 16, 0)
+      drawSunbeams(ctx, this.map, PAD)
       // Soft shadows where walls and furniture meet the floor.
       for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) {
         const t = tileAt(this.map, x, y)
@@ -657,8 +692,12 @@ export class WorldRuntime {
         const f = (a: number, b: number) => tileAt(this.map, a, b) === 'F'
         drawables.push({ y: y * 16 + 12, draw: () => drawFence(ctx, x * 16, y * 16, f(x - 1, y), f(x + 1, y), f(x, y - 1), f(x, y + 1)) })
       } else if (t === ',') {
-        const art = tallGrassCanvas(hash(x, y, 54) < 0.5 ? 0 : 1, Math.floor(this.time / 380 + x * 0.7 + y * 0.3) % 3, this.map.area)
-        if (art) drawables.push({ y: y * 16 + 15, draw: () => ctx.drawImage(art, x * 16, y * 16 - 2) })
+        // Pushed-through grass shakes fast for a moment, then settles back into the breeze.
+        const shake = this.ambient.rustleAt(x, y)
+        const frame = shake > 0 ? Math.floor(this.time / 70) % 3 : Math.floor(this.time / 380 + x * 0.7 + y * 0.3) % 3
+        const jx = shake > 0 ? Math.round(Math.sin(this.time / 35 + x) * 1.6 * shake) : 0
+        const art = tallGrassCanvas(hash(x, y, 54) < 0.5 ? 0 : 1, frame, this.map.area)
+        if (art) drawables.push({ y: y * 16 + 15, draw: () => ctx.drawImage(art, x * 16 + jx, y * 16 - 2) })
       } else if (t === 'C' && !flags.has(cutFlag(this.map.id, x, y))) {
         drawables.push({ y: y * 16 + 12, draw: () => drawCardboard(ctx, x * 16, y * 16) })
       } else if (t === 'C') {
@@ -784,7 +823,8 @@ export class WorldRuntime {
     const frame = Math.floor(this.time / 420) % 3
     for (let y = y0; y <= y1; y += 1) for (let x = x0; x <= x1; x += 1) {
       const t = tileAt(this.map, x, y)
-      if (t === 'l' || t === 'V' || t === '3' || t === 'A') drawTile(ctx, this.map, x, y, x * 16, y * 16, frame, flags)
+      if (t === 'V' && this.map.area !== 'cave') drawScreenTile(ctx, this.map, x, y, x * 16, y * 16, this.map.tint ?? (this.map.id === 'hall' ? '#e9ddff' : '#e6eef7'), this.time)
+      else if (t === 'l' || t === 'V' || t === '3' || t === 'A') drawTile(ctx, this.map, x, y, x * 16, y * 16, frame, flags)
     }
   }
 

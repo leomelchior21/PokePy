@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { audio } from '../../engine/audio'
 import type { SlingChallenge } from '../minigames'
-import { burst, confetti, drawParticles, INK, roundRect, scenery, stepParticles, tag, text, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
+import { burst, confetti, drawParticles, hint, INK, roundRect, scenery, stepParticles, tag, text, textWidth, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
 import type { GameProps } from './types'
 
 interface Block { x: number; y: number; w: number; h: number; vx: number; vy: number; rot: number; spin: number }
@@ -14,7 +14,7 @@ export function SlingGame({ challenge, accent, hero, started, onFinish, controls
   const canvas = useRef<HTMLCanvasElement>(null)
   const state = useRef({
     towers: [] as Tower[], w: 0, h: 0, shot: { x: 0, y: 0, vx: 0, vy: 0, flying: false, rest: 0 }, dragging: false, shots: challenge.shots,
-    particles: [] as Particle[], t: 0, done: false, lastDown: false, trail: [] as Array<{ x: number; y: number }>, message: '' as string, messageT: 0,
+    particles: [] as Particle[], t: 0, done: false, laid: false, lastDown: false, trail: [] as Array<{ x: number; y: number }>, message: '' as string, messageT: 0,
   })
   const anchor = (h: number) => ({ x: 96, y: h - 120 })
   const build = (w: number, h: number) => {
@@ -37,8 +37,29 @@ export function SlingGame({ challenge, accent, hero, started, onFinish, controls
     })
     const a = anchor(h)
     s.shot = { x: a.x, y: a.y, vx: 0, vy: 0, flying: false, rest: 0 }
+    s.laid = false
+  }
+  const signSize = (w: number) => Math.min(20, Math.max(15, (w - Math.max(170, w * 0.3)) / challenge.options.length / 8))
+  /** Lifts each sign until it clears every other sign and every other tower, so nothing overlaps. */
+  const layout = (ctx: Ctx, w: number) => {
+    const s = state.current
+    const size = signSize(w)
+    const placed: Array<{ l: number; r: number; t: number; b: number }> = []
+    const half = (tower: Tower) => (textWidth(ctx, tower.value, size) + size * 1.3) / 2 + 6
+    for (const tower of [...s.towers].sort((a, b) => half(b) - half(a))) {
+      const hw = half(tower)
+      const h = size * 2.1
+      const others = s.towers.filter((other) => other !== tower).map((other) => ({ l: other.x - 30, r: other.x + 30, t: other.base - other.blocks.length * 26 - 8, b: other.base }))
+      const hits = (y: number) => [...placed, ...others].some((box) => tower.x - hw < box.r && tower.x + hw > box.l && y - h / 2 < box.b && y + h / 2 > box.t)
+      let y = tower.base - tower.blocks.length * 26 - 34
+      while (hits(y) && y > h + 60) y -= 6
+      tower.signY = y
+      placed.push({ l: tower.x - hw, r: tower.x + hw, t: y - h / 2, b: y + h / 2 })
+    }
+    s.laid = true
   }
   const loop = useRef<Loop>({
+    fit: { w: 600, h: 420 },
     update: (dt, w, h) => {
       const s = state.current
       s.t += dt
@@ -122,6 +143,7 @@ export function SlingGame({ challenge, accent, hero, started, onFinish, controls
     draw: (ctx: Ctx, w: number, h: number) => {
       const s = state.current
       scenery(ctx, w, h, s.t, accent)
+      if (!s.laid) layout(ctx, w)
       const a = anchor(h)
       // Trajectory preview while aiming.
       if (s.dragging) {
@@ -150,7 +172,7 @@ export function SlingGame({ challenge, accent, hero, started, onFinish, controls
         }
         if (tower.state !== 'boom') {
           ctx.fillStyle = INK; ctx.fillRect(tower.x - 2 + jx, tower.signY, 4, tower.base - tower.blocks.length * 26 - tower.signY)
-          const size = Math.min(17, Math.max(12, (w - Math.max(170, w * 0.3)) / challenge.options.length / 8))
+          const size = signSize(w)
           const box = tag(ctx, tower.value, tower.x + jx, tower.signY, size, tower.state === 'wrong' ? '#ffd0d8' : '#fff8e8')
           tower.signW = box.w
           tower.signH = box.h
@@ -172,10 +194,10 @@ export function SlingGame({ challenge, accent, hero, started, onFinish, controls
       }
       drawParticles(ctx, s.particles)
       for (let i = 0; i < challenge.shots; i += 1) roundRect(ctx, 18 + i * 22, 14, 16, 16, 4, i < s.shots ? accent : '#5a4a6a')
-      if (!s.dragging && !shot.flying && !s.done && started.current) text(ctx, '← drag back, then let go', a.x + 70, a.y + 70, 13, '#ffffff', 'left')
+      if (!s.dragging && !shot.flying && !s.done && started.current && s.messageT <= 0) hint(ctx, 'Drag your pyxie back, then let go', w / 2, 40, 16)
       if (s.messageT > 0) tag(ctx, s.message, w / 2, 40, 17, s.message.startsWith('✓') ? '#c9f7d2' : s.message.startsWith('✗') ? '#ffd0d8' : '#fff8e8')
     },
   })
-  useCanvasLoop(canvas, loop)
+  useCanvasLoop(canvas, loop, controls)
   return <canvas ref={canvas} className="mini__canvas" aria-label="Print Slingshot: drag back and launch at the right tower" />
 }

@@ -45,7 +45,7 @@ const vila: GameMap = {
   ],
   edges: [{ side: 'up', to: 'route1', offset: -2 }],
   npcs: [
-    person('vila-kid', 'Kid', 4, 6, 17, 'left', ['The fish in this pond are just reflections of clouds.', 'I checked with a print().']),
+    person('vila-kid', 'Kid', 4, 6, 17, 'left', ['The fish in this pond are just reflections of clouds.', 'I checked with a print().', 'Leo Maker still won\'t walk past this pond, though.', 'He says the fish "stare at him".']),
     person('vila-gardener', 'Gardener', 9, 20, 12, 'down', ['Leo Maker says every great project starts as cardboard.', 'Then it becomes MORE cardboard. Then a robot.'], 'wander'),
   ],
   signs: [
@@ -61,7 +61,7 @@ const home = house('home', 'Your House', { map: 'vila', x: 5, y: 6 }, [
 ], [{ x: 5, y: 1, script: 'tv' }, { x: 1, y: 1, script: 'home-shelf' }])
 
 const brianHouse = house('brian-house', 'Brian\'s House', { map: 'vila', x: 17, y: 6 }, [
-  person('brian-sis', 'Brian\'s Sister', 22, 7, 5, 'left', ['Brian left at dawn with his goggles on his head.', 'He says he will be the best maker in the valley.', 'He also says that about his sandwiches.']),
+  person('brian-sis', 'Brian\'s Sister', 22, 7, 5, 'left', ['Brian left at dawn with his goggles on his head.', 'He says he will be the best maker in the valley.', 'He also says that about his sandwiches.', 'Once he hid a rubber fish in Leo Maker\'s toolbox.', 'Leo screamed so loud the 3D printers paused. He is VERY afraid of fish.']),
 ], [{ x: 1, y: 1, script: 'brian-shelf' }, { x: 2, y: 1, script: 'brian-shelf' }, { x: 5, y: 1, script: 'brian-tv' }])
 
 const makerspace: GameMap = {
@@ -200,9 +200,10 @@ const harbor: GameMap = {
   ],
   edges: [{ side: 'down', to: 'route1', offset: -2 }, { side: 'right', to: 'route2', offset: 0 }],
   npcs: [
-    person('harbor-fisher', 'Fisher', 11, 15, 2, 'up', ['I fish for bugs.', 'In code, I mean. The real fish are too fast.']),
+    person('harbor-fisher', 'Fisher', 11, 15, 2, 'up', ['I fish for bugs.', 'In code, I mean. The real fish are too fast.', 'Leo Maker came by once. He saw my bucket and ran all the way back to Vila Maker.', 'Grown man. Afraid of a sardine.']),
     person('harbor-sailor', 'Sailor', 5, 8, 4, 'down', ['Marina Echo runs the Lab here.', 'Her pyxies repeat EVERYTHING. Even typos.', 'Beat her and the Echo Badge is yours.'], 'wander'),
     person('harbor-kid', 'Kid', 13, 20, 16, 'left', ['print("Hello") shows Hello.', 'print(Hello) without quotes? Python panics. Hehe.']),
+    { id: 'harbor-bio', name: 'Marine Biologist', look: kid(12), x: 20, y: 4, facing: 'up', script: 'fish-quiz' },
   ],
   signs: [{ x: 9, y: 11, text: ['ECHO HARBOR', 'Where every word comes back.'] }],
 }
@@ -290,7 +291,7 @@ const boxford: GameMap = {
   edges: [{ side: 'left', to: 'route2', offset: 0 }, { side: 'up', to: 'route3', offset: -1 }],
   npcs: [
     { id: 'brian-boxford', name: 'Brian', look: looks.brian, x: 11, y: 14, facing: 'down', script: 'brian-arduino', hideIf: 'arduino_returned' },
-    person('boxford-old', 'Old Maker', 20, 20, 17, 'left', ['In my day, we stored variables on punch cards.', 'Now kids keep them in Memoths. Progress!']),
+    person('boxford-old', 'Old Maker', 20, 20, 17, 'left', ['In my day, we stored variables on punch cards.', 'Now kids keep them in Memoths. Progress!', 'Ich-thy-o-pho-bia. The fear of fish.', 'Long word. Short story: Leo Maker and one goldfish.']),
   ],
   signs: [
     { x: 9, y: 9, text: ['BOXFORD', 'Everything has a label here.'] },
@@ -386,7 +387,7 @@ const stringhaven: GameMap = {
   ],
   edges: [{ side: 'down', to: 'route3', offset: -1 }, { side: 'left', to: 'route4', offset: 0 }],
   npcs: [
-    person('sh-poet', 'Poet', 21, 8, 13, 'right', ['"Hello" + "World" is HelloWorld.', 'No space. No mercy. Such is the way of +.']),
+    person('sh-poet', 'Poet', 21, 8, 13, 'right', ['"Hello" + "World" is HelloWorld.', 'No space. No mercy. Such is the way of +.', 'My saddest poem: "Leo Maker" + " meets a fish".', 'The rest is just screaming.']),
     person('sh-kid', 'Kid', 23, 15, 7, 'down', ['West of town is Sum Canyon.', 'A cardboard wall blocks the cave!', 'Lia Quote has a Box Cutter. Just saying.'], 'wander'),
   ],
   signs: [{ x: 13, y: 8, text: ['STRINGHAVEN', 'Glued together with care.'] }],
@@ -772,7 +773,7 @@ const academy: GameMap = {
   edges: [{ side: 'down', to: 'hackroad', offset: -1 }],
   npcs: [
     person('ac-student1', 'Student', 36, 16, 11, 'left', ['Welcome to Lourenço Castanho!', 'Our colors are purple and yellow. Go team!']),
-    person('ac-student2', 'Student', 37, 19, 16, 'up', ['The Makerspace here has laser cutters, 3D printers AND a robot named Kevin.', 'Kevin does not do homework. We asked.'], 'wander'),
+    person('ac-student2', 'Student', 37, 19, 16, 'up', ['The Makerspace here has laser cutters, 3D printers AND a robot named Kevin.', 'Kevin does not do homework. We asked.', 'Kevin has one rule: NO FISH in the Makerspace. Leo Maker\'s orders.'], 'wander'),
     person('ac-student3', 'Student', 38, 7, 16, 'right', ['The Grand Hackathon finals are inside!', 'They say the champion is a maker named Leo.']),
   ],
   signs: [{ x: 9, y: 9, text: ['ESCOLA LOURENÇO CASTANHO', 'Grand Hackathon this week! Purple and yellow forever.'] }],

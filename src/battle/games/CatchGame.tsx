@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { audio } from '../../engine/audio'
 import type { CatchChallenge } from '../minigames'
-import { burst, confetti, drawParticles, hearts, INK, roundRect, scenery, stepParticles, tag, text, timerBar, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
+import { burst, confetti, drawParticles, hearts, hint, INK, roundRect, scenery, stepParticles, tag, text, timerBar, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
 import type { GameProps } from './types'
 
 interface Drop { id: number; x: number; y: number; vy: number; value: string; right: boolean; wobble: number }
@@ -15,6 +15,7 @@ export function CatchGame({ challenge, accent, started, onFinish, controls }: Ga
   })
   const right = challenge.options[challenge.answer]
   const loop = useRef<Loop>({
+    fit: { w: 560, h: 420 },
     update: (dt, w, h) => {
       const s = state.current
       s.t += dt
@@ -91,9 +92,9 @@ export function CatchGame({ challenge, accent, started, onFinish, controls }: Ga
       hearts(ctx, 22, 22, 3 - s.misses, 3)
       timerBar(ctx, 100, 16, Math.min(260, w - 260), s.time / challenge.seconds)
       for (let i = 0; i < challenge.need; i += 1) text(ctx, i < s.caught ? '★' : '☆', w - 30 - i * 28, 22, 24, i < s.caught ? '#ffd23f' : '#ffffff')
-      text(ctx, `CATCH: ${challenge.focus ? `the value of ${challenge.focus}` : 'what it prints'}`, w / 2, h - 14, 13, '#ffffff')
+      hint(ctx, `CATCH: ${challenge.focus ? `the value of ${challenge.focus}` : 'what it prints'}`, w / 2, h - 17, 15)
     },
   })
-  useCanvasLoop(canvas, loop)
+  useCanvasLoop(canvas, loop, controls)
   return <canvas ref={canvas} className="mini__canvas" aria-label="Output Catcher: move the basket under the right value" />
 }

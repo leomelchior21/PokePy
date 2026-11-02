@@ -38,7 +38,7 @@ export function MiniGame({ challenge, title, hero, ducks, onDuck, onFinish }: Pr
   const needsStart = challenge.kind !== 'blocks'
   const [started, setStarted] = useState(!needsStart)
   const startedRef = useRef(!needsStart)
-  const controls = useRef<Controls>({ left: false, right: false, pointerX: null, pointerY: null, down: false, taps: 0 })
+  const controls = useRef<Controls>({ left: false, right: false, pointerX: null, pointerY: null, down: false, taps: 0, scale: 1 })
   const [trace, setTrace] = useState<{ line: number | null; notes: Record<number, string> }>({ line: challenge.kind === 'flappy' ? 0 : null, notes: {} })
   const finished = useRef(false)
   const onFinishRef = useRef(onFinish)
@@ -74,8 +74,9 @@ export function MiniGame({ challenge, title, hero, ducks, onDuck, onFinish }: Pr
 
   const point = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect()
-    controls.current.pointerX = event.clientX - rect.left
-    controls.current.pointerY = event.clientY - rect.top
+    const k = controls.current.scale || 1
+    controls.current.pointerX = (event.clientX - rect.left) / k
+    controls.current.pointerY = (event.clientY - rect.top) / k
   }
 
   const props = { accent: info.color, hero: heroArt, started: startedRef, controls, onFinish: finish }

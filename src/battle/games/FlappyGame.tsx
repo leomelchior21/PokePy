@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { audio } from '../../engine/audio'
 import type { FlappyChallenge } from '../minigames'
-import { burst, confetti, drawParticles, hearts, INK, roundRect, scenery, stepParticles, tag, text, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
+import { burst, confetti, drawParticles, hearts, hint, INK, roundRect, scenery, stepParticles, tag, text, useCanvasLoop, type Ctx, type Loop, type Particle } from './kit'
 import type { GameProps } from './types'
 
 const GRAVITY = 900
@@ -30,6 +30,7 @@ export function FlappyGame({ challenge, accent, hero, started, onFinish, onTrace
   }
   const gateX = (i: number) => 380 + i * GAP
   const loop = useRef<Loop>({
+    fit: { w: 600, h: 440 },
     update: (dt, w, h) => {
       const s = state.current
       s.t += dt
@@ -112,7 +113,7 @@ export function FlappyGame({ challenge, accent, hero, started, onFinish, onTrace
           if (passed) return
           tag(ctx, gate.options[k], gx + WALL / 2, hy, 17)
         })
-        text(ctx, `line ${gate.line + 1}`, gx + WALL / 2, 26, 12, '#ffffff')
+        hint(ctx, `line ${gate.line + 1}`, gx + WALL / 2, 56, 14)
       })
       // The pyxie, tilted by its speed.
       ctx.save()
@@ -125,9 +126,9 @@ export function FlappyGame({ challenge, accent, hero, started, onFinish, onTrace
       hearts(ctx, 22, 22, s.hearts, challenge.hearts)
       text(ctx, `GATE ${Math.min(s.gate + 1, challenge.gates.length)}/${challenge.gates.length}`, w - 70, 22, 15, INK)
       if (s.messageT > 0) tag(ctx, s.message, w / 2, 50, 16, s.good ? '#c9f7d2' : '#ffd0d8')
-      if (started.current && s.gate === 0 && s.scroll < 120) text(ctx, 'TAP or SPACE to flap', w / 2, h - 60, 15, '#ffffff')
+      if (started.current && s.gate === 0 && s.scroll < 120) hint(ctx, 'TAP or SPACE to flap', w / 2, h - 60, 17)
     },
   })
-  useCanvasLoop(canvas, loop)
+  useCanvasLoop(canvas, loop, controls)
   return <canvas ref={canvas} className="mini__canvas" aria-label="Trace Flight: tap to flap through the right value" />
 }

@@ -115,18 +115,21 @@ export function MatchGame({ challenge, accent, started, onFinish }: GameProps<Ma
     if (target >= 0) void trySwap(start.index, target)
   }
 
-  // The board fits the space left under the HUD, up to 64 px a tile.
+  // The board fits the space left under the HUD, up to 116 px a tile, so iPads get big tiles.
   const wrap = useRef<HTMLDivElement>(null)
   const [cellSize, setCellSize] = useState(48)
   useEffect(() => {
     const el = wrap.current
     if (!el) return
-    const measure = () => setCellSize(Math.max(34, Math.floor(Math.min(64, (el.clientWidth - (n + 1) * 6) / n, (el.clientHeight - (n + 1) * 6) / n))))
+    const measure = () => setCellSize(Math.max(40, Math.floor(Math.min(116, (el.clientWidth - (n + 1) * 6) / n, (el.clientHeight - (n + 1) * 6) / n))))
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
   }, [n])
+  // One text size for the whole board, from its longest expression: every tile reads the same.
+  const longest = Math.max(...cells.map((cell) => cell.tile.expr.length))
+  const font = Math.max(13, Math.min(26, (cellSize - 14) / (longest * 0.62)))
   return <div className="match" style={{ '--c': accent, '--cell': `${cellSize}px`, '--n': n } as CSSProperties}>
     <div className="match__hud">
       <span>{Array.from({ length: challenge.goal }, (_, i) => <b key={i} className={i < groups ? 'is-on' : ''}>★</b>)}</span>
@@ -142,7 +145,7 @@ export function MatchGame({ challenge, accent, started, onFinish }: GameProps<Ma
             style={{ '--x': x, '--y': y } as CSSProperties}
             onPointerDown={(event) => onDown(i, event)} onPointerUp={onUp}
             aria-label={`${cell.tile.expr}, row ${y + 1}, column ${x + 1}`}>
-            <code style={{ fontSize: `${Math.max(9, Math.min(17, (cellSize - 12) / (cell.tile.expr.length * 0.62)))}px` }}>{cell.tile.expr}</code>
+            <code style={{ fontSize: `${font}px` }}>{cell.tile.expr}</code>
             {(reveal.includes(i) || cell.state === 'pop') && <em>= {cell.tile.value}</em>}
           </button>
         })}

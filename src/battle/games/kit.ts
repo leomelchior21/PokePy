@@ -7,10 +7,12 @@ export type Ctx = CanvasRenderingContext2D
 export interface Loop {
   update: (dt: number, w: number, h: number) => void
   draw: (ctx: Ctx, w: number, h: number) => void
+  /** The stage size the game was designed for. Bigger stages (an iPad) zoom the whole game in. */
+  fit?: { w: number; h: number }
 }
 
 /** Runs a game on a canvas that fills its parent, in CSS pixels, at the screen's real resolution. */
-export function useCanvasLoop(ref: React.RefObject<HTMLCanvasElement | null>, loop: React.RefObject<Loop>) {
+export function useCanvasLoop(ref: React.RefObject<HTMLCanvasElement | null>, loop: React.RefObject<Loop>, controls?: React.RefObject<{ scale: number }>) {
   useEffect(() => {
     const canvas = ref.current
     const ctx = canvas?.getContext('2d')
@@ -24,15 +26,18 @@ export function useCanvasLoop(ref: React.RefObject<HTMLCanvasElement | null>, lo
       const w = canvas.clientWidth
       const h = canvas.clientHeight
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr) }
-      loop.current.update(dt, w, h)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      const fit = loop.current.fit
+      const k = fit ? Math.max(1, Math.min(1.7, w / fit.w, h / fit.h)) : 1
+      if (controls?.current) controls.current.scale = k
+      loop.current.update(dt, w / k, h / k)
+      ctx.setTransform(dpr * k, 0, 0, dpr * k, 0, 0)
       ctx.imageSmoothingEnabled = false
-      loop.current.draw(ctx, w, h)
+      loop.current.draw(ctx, w / k, h / k)
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [ref, loop])
+  }, [ref, loop, controls])
 }
 
 /** A ref that always holds the latest value, for callbacks inside the loop. */
@@ -78,6 +83,15 @@ export function tag(ctx: Ctx, value: string, cx: number, cy: number, size: numbe
   roundRect(ctx, cx - w / 2, cy - h / 2, w, h, 9, fill)
   text(ctx, value, cx, cy + 1, size, color)
   return { w, h }
+}
+
+/** How-to-play text on a dark pill, readable over any sky. */
+export function hint(ctx: Ctx, value: string, cx: number, cy: number, size = 16) {
+  const w = textWidth(ctx, value, size) + size * 1.6
+  const h = size * 2
+  ctx.fillStyle = 'rgba(27, 22, 38, 0.78)'
+  ctx.beginPath(); ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h / 2); ctx.fill()
+  text(ctx, value, cx, cy + 1, size, '#ffffff')
 }
 
 /** Sky, hills and grass in the battle's colors. */

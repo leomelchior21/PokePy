@@ -6,10 +6,9 @@ import type { AvatarChoice, SaveState } from '../types'
 import { avatarLook, hairColors, looks, outfitColors, skinTones } from '../world/looks'
 import { DialogBox } from './Dialog'
 import { PersonImg, PyxieImg } from './Sprite'
+import { Logo, TitleScene } from './TitleScene'
 
 type Stage = 'splash' | 'login' | 'loading' | 'continue' | 'intro' | 'avatar' | 'outro'
-
-const flyers = ['sparkit', 'echobat', 'quotie', 'booly', 'forkit', 'plusling', 'boxlet']
 
 export function Title({ onStart }: { onStart: (save: SaveState) => void }) {
   const [stage, setStage] = useState<Stage>('splash')
@@ -72,20 +71,17 @@ export function Title({ onStart }: { onStart: (save: SaveState) => void }) {
   const first = user?.displayName.split(' ')[0] ?? ''
 
   return <div className={`title ${maker ? 'is-maker' : ''}`}>
-    <div className="title__sky" aria-hidden="true">
-      <i className="title__sun" />
-      <i className="title__cloud c1" /><i className="title__cloud c2" /><i className="title__cloud c3" />
-      <i className="title__hills h1" /><i className="title__hills h2" />
-      <div className="title__school"><b>LC</b></div>
-      {flyers.map((species, i) => <span key={species} className={`title__flyer f${i}`}><PyxieImg species={species} size={44} /></span>)}
-    </div>
+    <TitleScene />
+    <div className="title__shade" aria-hidden="true" />
 
     <div className="title__content">
-      <h1 className="logo" aria-label="Pyxies">{'PYXIES'.split('').map((letter, i) => <span key={i} style={{ animationDelay: `${i * 90}ms` }}>{letter}</span>)}</h1>
-      <p className="title__tag">A Python adventure in the Castanho Valley</p>
+      <h1 className="logo" aria-label="Pyxies"><Logo /></h1>
+      <div className="title__ribbon"><span>A PYTHON ADVENTURE</span></div>
+      <p className="title__tag">in the Castanho Valley</p>
       {maker && <p className="title__secret">🛠 Leo Maker approves. Keep building! 🛠</p>}
 
       {stage === 'splash' && <button className="press-start" onClick={begin}>▶ PRESS START</button>}
+      {stage === 'splash' && <p className="title__hint">Tap to begin · best with sound on 🔊</p>}
 
       {stage === 'login' && <form className="login-card" onSubmit={submit}>
         <label htmlFor="login">Your first name + last name</label>

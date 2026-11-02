@@ -2,6 +2,7 @@
 // Handheld-style: dithered textures, dark outlines, light from the top left.
 import type { Building, GameMap } from '../world/types'
 import { doorOf, tileAt } from '../world/world'
+import { drawInteriorTile, floorOf } from './interior'
 import { shade } from './pixels'
 
 type Ctx = CanvasRenderingContext2D
@@ -165,8 +166,9 @@ function floorLab(ctx: Ctx, ox: number, oy: number, tint: string, tx: number, ty
 }
 
 function floorBase(ctx: Ctx, map: GameMap, ox: number, oy: number, tx: number, ty: number, tint: string) {
-  if (map.area === 'lab' || map.area === 'academy') floorLab(ctx, ox, oy, tint, tx, ty)
-  else if (map.area === 'cave') caveFloor(ctx, ox, oy, tx, ty)
+  if (map.area === 'cave') caveFloor(ctx, ox, oy, tx, ty)
+  else if (map.outside === 'void') floorOf(ctx, map, ox, oy, tx, ty, tint)
+  else if (map.area === 'lab' || map.area === 'academy') floorLab(ctx, ox, oy, tint, tx, ty)
   else floorWood(ctx, ox, oy, tx, ty)
 }
 
@@ -203,6 +205,7 @@ function pathTile(ctx: Ctx, map: GameMap, ox: number, oy: number, tx: number, ty
 export function drawTile(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: number, oy: number, frame: number, flags: ReadonlySet<string>) {
   const tile = tileAt(map, tx, ty)
   const tint = map.tint ?? (map.id === 'hall' ? '#e9ddff' : '#e6eef7')
+  if (map.outside === 'void' && drawInteriorTile(ctx, map, tx, ty, ox, oy, tint)) return
   switch (tile) {
     case '.': grass(ctx, ox, oy, tx, ty); break
     case ',': tallGrass(ctx, ox, oy, frame, tx, ty); break
