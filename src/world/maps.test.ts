@@ -4,11 +4,11 @@ import { speciesById } from '../data/species'
 import { items } from '../data/items'
 import { scripts } from '../game/scripts'
 import { getMap, maps, START } from './maps'
-import { buildingAt, cutFlag, doorOf, mapHeight, mapWidth, step, tileAt, walkable, warpAt } from './world'
+import { buildingAt, builtFlag, cutFlag, doorOf, mapHeight, mapWidth, step, tileAt, walkable, warpAt } from './world'
 import type { Direction } from '../types'
 
 const noFlags = new Set<string>()
-const known = new Set('.,:=sfTt~#rLFPCW_-RKBDXV3GAmclH'.split(''))
+const known = new Set('.,:=sfTt~#rLFPCW_-RKBDXV3GAmclHb'.split(''))
 
 describe('the valley maps', () => {
   it('are rectangles made of known tiles', () => {
@@ -94,7 +94,7 @@ describe('the valley maps', () => {
 
   it('connect every map to home, walking only', () => {
     // Breadth-first walk with every cardboard wall already cut and every NPC out of the way.
-    const flags = new Set<string>(maps.flatMap((map) => map.rows.flatMap((row, y) => [...row].flatMap((char, x) => char === 'C' ? [cutFlag(map.id, x, y)] : []))))
+    const flags = new Set<string>([...maps.flatMap((map) => map.rows.flatMap((row, y) => [...row].flatMap((char, x) => char === 'C' ? [cutFlag(map.id, x, y)] : []))), ...maps.map((map) => builtFlag(map.id))])
     const cleared = (id: string) => Object.fromEntries((getMap(id).npcs ?? []).map((npc) => [npc.id, { x: -9, y: -9 }]))
     const seen = new Set<string>()
     const reached = new Set<string>([START.map])
@@ -124,7 +124,7 @@ describe('a random walk across the whole valley', () => {
   it('never ends up inside a wall, outside a map, or stuck for good', async () => {
     const { createRng } = await import('../lib/rng')
     const rng = createRng(2026)
-    const flags = new Set<string>(maps.flatMap((map) => map.rows.flatMap((row, y) => [...row].flatMap((char, x) => char === 'C' ? [cutFlag(map.id, x, y)] : []))))
+    const flags = new Set<string>([...maps.flatMap((map) => map.rows.flatMap((row, y) => [...row].flatMap((char, x) => char === 'C' ? [cutFlag(map.id, x, y)] : []))), ...maps.map((map) => builtFlag(map.id))])
     let map = getMap(START.map)
     let x = START.x
     let y = START.y

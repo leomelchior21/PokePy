@@ -35,6 +35,11 @@ coding challenges, then face six Lab Masters whose pyxies only fall to real Pyth
   mechanic. Students write real Python in an editor, and every hidden test that passes breaks a shield.
 - **Progress**: Trainer XP opens each Lab, badges open the Grand Hackathon, pyxies level up and evolve.
 
+- **Build**: some paths need building. On Route 1 the storm broke the bridge to Echo Harbor: students chop
+  fallen logs for wood and pull river reeds for fiber, then build at the Maker Bench, where their bag
+  becomes Python variables and they read the code that checks and spends the materials
+  (`print(wood >= 3)`, `wood = wood - 3`). Gathering spots grow back; recipes live in `src/data/recipes.ts`.
+
 Visual aid comes first: whenever the story gives something new (the Codex, Bytecubes, Patches) or
 names a new place, it is shown big on screen. Items get a spotlit card; places get an aerial view of the
 whole map plus the illustrated valley map with an arrow on it. Arrows also mark every path out of a map.

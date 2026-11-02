@@ -83,8 +83,9 @@ export function buildGround(map: GameMap, flags: ReadonlySet<string>, pad: numbe
       return (at(i, j) * (1 - tx) + at(i + 1, j) * tx) * (1 - ty) + (at(i, j + 1) * (1 - tx) + at(i + 1, j + 1) * tx) * ty
     }
   }
-  const water = field((t) => t === '~' || t === 'P')
-  const depth = field((t) => t === '~' || t === 'P', true)
+  // A bridge site is river until the bridge is built over it.
+  const water = field((t) => t === '~' || t === 'P' || t === 'b')
+  const depth = field((t) => t === '~' || t === 'P' || t === 'b', true)
   const sand = field((t) => t === 's')
   const dirt = field((t) => t === ':')
   const pave = field((t) => t === '=')
@@ -166,10 +167,24 @@ export function buildGround(map: GameMap, flags: ReadonlySet<string>, pad: numbe
     if (t === '#') cliff(ctx, map, x, y, ox(x), oy(y))
     else if (t === 'L') ledge(ctx, map, x, y, ox(x), oy(y))
     else if (t === 'P') pier(ctx, map, x, y, ox(x), oy(y))
+    else if (t === 'b') { if (flags.has(`built:${map.id}`)) pier(ctx, map, x, y, ox(x), oy(y), true); else brokenBridge(ctx, map, x, y, ox(x), oy(y)) }
   }
   for (const building of map.buildings ?? []) drawBuilding(ctx, building, ox(building.x), oy(building.y), 0)
-  void flags
   return canvas
+}
+
+/** What the storm left: snapped posts at both banks and one plank drifting in the current. */
+function brokenBridge(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: number, oy: number) {
+  const site = (x: number, y: number) => tileAt(map, x, y) === 'b'
+  const ink = '#1b1626'
+  const post = (x: number, y: number) => { ctx.fillStyle = ink; ctx.fillRect(x - 1, y - 1, 5, 7); ctx.fillStyle = '#6e4526'; ctx.fillRect(x, y, 3, 5); ctx.fillStyle = '#a06d40'; ctx.fillRect(x, y, 3, 1) }
+  if (!site(tx, ty - 1)) { post(ox + 2, oy - 2); post(ox + 11, oy - 1) }
+  if (!site(tx, ty + 1)) { post(ox + 3, oy + 10); post(ox + 10, oy + 11) }
+  if (site(tx, ty - 1) && site(tx, ty + 1) && !site(tx - 1, ty)) {
+    ctx.fillStyle = ink; ctx.fillRect(ox + 4, oy + 5, 14, 5)
+    ctx.fillStyle = '#b47c48'; ctx.fillRect(ox + 5, oy + 6, 12, 3)
+    ctx.fillStyle = '#d29a5e'; ctx.fillRect(ox + 5, oy + 6, 12, 1)
+  }
 }
 
 const flowerColors = [['#ffffff', '#ffe14d'], ['#ffd23f', '#ff9f1c'], ['#ff7fb0', '#ffe14d'], ['#7fb8ff', '#ffffff'], ['#c79bff', '#ffe14d']]
@@ -336,8 +351,8 @@ function ledge(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: number, oy: n
   ctx.fillRect(ox + x0, oy + 16, x1 - x0, 3)
 }
 
-function pier(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: number, oy: number) {
-  const pierAt = (x: number, y: number) => tileAt(map, x, y) === 'P'
+function pier(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: number, oy: number, bridge = false) {
+  const pierAt = (x: number, y: number) => tileAt(map, x, y) === (bridge ? 'b' : 'P')
   const horizontal = pierAt(tx - 1, ty) || pierAt(tx + 1, ty)
   ctx.fillStyle = 'rgba(20, 40, 80, 0.3)'
   ctx.fillRect(ox + 2, oy + 3, 16, 16)

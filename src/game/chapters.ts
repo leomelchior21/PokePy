@@ -28,7 +28,7 @@ const base = ['intro_done', 'lab_intro', 'got_starter', 'rival1']
 export const chapters: Chapter[] = [
   { id: 'start', label: 'New adventure', note: 'Wake up at home. Leo Maker is waiting.', map: 'home-2f', x: 2, y: 2, level: 0, badges: [], flags: [], defeated: [], xp: 0 },
   { id: 'starter', label: 'Choose a starter', note: 'The Makerspace, right before the three pods.', map: 'makerspace', x: 7, y: 5, level: 0, badges: [], flags: ['intro_done', 'lab_intro'], defeated: [], xp: 0 },
-  { id: 'route1', label: 'Route 1', note: 'Starter in hand, first wild pyxies.', map: 'route1', x: 9, y: 25, level: 6, badges: [], flags: base, defeated: [], xp: 30 },
+  { id: 'route1', label: 'Route 1', note: 'Starter in hand, first wild pyxies.', map: 'route1', x: 21, y: 36, level: 6, badges: [], flags: base, defeated: [], xp: 30 },
   { id: 'echo', label: 'Lab 1 · Marina Echo (print)', note: 'Inside Echo Harbor Lab, gate already open.', map: 'harbor-lab', x: 6, y: 11, level: 11, badges: [], flags: base, defeated: ['r1-tom', 'r1-bia'], xp: labGates.echo },
   { id: 'box', label: 'Lab 2 · Otto Box (variables)', note: 'Inside Boxford Lab.', map: 'boxford-lab', x: 6, y: 11, level: 16, badges: B.slice(0, 1), flags: base, defeated: [], xp: labGates.box },
   { id: 'rival2', label: 'Brian on Quote Coast', note: 'Right below the rival battle.', map: 'route3', x: 10, y: 6, level: 18, badges: B.slice(0, 2), flags: base, defeated: [], xp: labGates.box + 300 },
@@ -70,7 +70,7 @@ export function chapterSave(chapter: Chapter, from: SaveState): SaveState {
     map: chapter.map, x: chapter.x, y: chapter.y, facing: 'up',
     team,
     badges: chapter.badges,
-    flags: [...new Set([...chapter.flags, ...(team.length ? ['starter:sparkit'] : []), ...chapter.badges.map((b) => `badge-${b}`), ...(chapter.level ? visited : [])])],
+    flags: [...new Set([...chapter.flags, ...(team.length ? ['starter:sparkit'] : []), ...chapter.badges.map((b) => `badge-${b}`), ...(chapter.level ? visited : []), ...(chapter.level && chapter.id !== 'route1' ? ['built:route1'] : [])])],
     defeated: chapter.defeated,
     trainerXp: chapter.xp,
     bits: 500 + chapter.level * 80,

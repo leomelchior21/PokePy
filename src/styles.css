@@ -659,3 +659,28 @@ code, pre { font-family: var(--mono); }
 .valley__target { animation: pulse 1s ease-in-out infinite; }
 @keyframes show-pop { from { transform: scale(0.7); opacity: 0; } }
 @keyframes show-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Maker Bench: build things by reading the code that checks your bag ---------- */
+.bench { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 26px 14px 14px; background: radial-gradient(circle at 50% 40%, rgba(42, 20, 80, 0.82), rgba(10, 4, 24, 0.94)); animation: insp-fade 0.2s ease; }
+.bench__card { position: relative; display: grid; gap: 14px; width: min(720px, 100%); max-height: 100%; overflow: auto; padding: 52px 22px 20px; border: 4px solid var(--ink); border-radius: 18px; color: var(--ink); background: var(--paper); box-shadow: 0 10px 0 var(--purple-dark); animation: show-pop 0.4s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.bench__head { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.bench__head h2 { margin: 0; font: clamp(20px, 3vw, 28px) var(--pixel); color: var(--purple); white-space: nowrap; }
+.bench__head p { margin: 0; font: 800 17px var(--ui); color: #4a4258; }
+.bench__needs { display: flex; justify-content: center; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.bench__needs li { display: grid; justify-items: center; gap: 2px; min-width: 120px; padding: 8px 12px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; }
+.bench__needs li.is-ok { background: #d9f7df; }
+.bench__needs b { font: 900 16px var(--ui); }
+.bench__needs span { font: 900 20px var(--mono); white-space: nowrap; }
+.bench__step { display: grid; gap: 10px; }
+.bench__step > small { font: 900 14px var(--ui); color: var(--purple); letter-spacing: 0.08em; }
+.bench__step .cv-code__line { font-size: 19px; }
+.bench__question { margin: 0; font: 900 19px var(--ui); }
+.bench__options { display: flex; flex-wrap: wrap; gap: 10px; }
+.bench__option { min-width: 120px; padding: 12px 18px; border: 3px solid var(--ink); border-radius: 12px; color: #f3eefc; background: #161226; box-shadow: 0 4px 0 var(--ink); font: 700 20px var(--mono); white-space: nowrap; }
+.bench__option.is-right { background: #1e5a34; box-shadow: 0 0 0 3px #5fd17a, 0 4px 0 var(--ink); }
+.bench__option.is-wrong { background: #5a1e2e; box-shadow: 0 0 0 3px #ff5f7e, 0 4px 0 var(--ink); animation: shake 0.3s; }
+.bench__explain { margin: 0; padding: 10px 14px; border-radius: 12px; font: 800 17px/1.4 var(--ui); }
+.bench__explain.is-right { background: #d9f7df; color: #1e6a34; }
+.bench__explain.is-wrong { background: #ffe1e6; color: #8a1e33; }
+.bench__actions { display: flex; justify-content: center; }
+.bench__actions .btn { min-width: 220px; font-size: 20px; }

@@ -7,10 +7,12 @@ import type { Rng } from '../lib/rng'
 import type { Direction, SaveState } from '../types'
 import { looks } from '../world/looks'
 import type { TrainerDef } from '../world/types'
+import { recipes } from '../data/recipes'
+import { builtFlag } from '../world/world'
 import { addPyxie, giveItem, hasFlag, healTeam, itemCount, markSeen, setFlag, takeItem } from './state'
 
 /** What the big picture card shows: an item with its icon, or a place with its aerial view and the valley map. */
-export type ShowSpec = { kind: 'item'; item: string; count?: number } | { kind: 'place'; map: string; building?: string; note?: string }
+export type ShowSpec = { kind: 'item'; item: string; count?: number; tag?: string } | { kind: 'place'; map: string; building?: string; note?: string }
 
 export interface ScriptUI {
   say: (lines: string | string[], speaker?: string) => Promise<void>
@@ -25,6 +27,8 @@ export interface ScriptUI {
   flash: () => Promise<void>
   /** A big picture of something new (an item, or a place on the map), for students who need to see it. */
   show?: (spec: ShowSpec) => Promise<void>
+  /** The Maker Bench for a recipe. Resolves true when the player finishes the code and builds it. */
+  craft?: (recipe: string) => Promise<boolean>
   /** The big look at a pyxie. With choose, it resolves true when the player picks it. */
   inspect?: (species: string, options?: { choose?: string; banner?: string }) => Promise<boolean>
 }
@@ -71,6 +75,8 @@ function rivalDef(id: string, stage: 1 | 2 | 3 | 4, save: SaveState, intro: stri
   return { id, title: 'Rival', kind: 'rival', team: rivalTeam(stage, save), bits: [0, 150, 700, 1400, 2500][stage], sight: 0, intro, lose, after: '', setFlag: id }
 }
 
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+
 async function gift(ctx: ScriptContext, item: string, count = 1) {
   ctx.set((save) => setFlag(giveItem(save, item, count), `seen-item:${item}`))
   ctx.ui.sfx('item')
@@ -107,6 +113,45 @@ export const scripts: Record<string, Script> = {
     }
     await ctx.ui.say(['Look at you, a real maker with a real pyxie!', 'Leo Maker came for dinner once. I served fish.', 'He left through the window. Poor thing.'], who)
   },
+  // Gathering: chop a fallen log for wood, pull river reeds for fiber. The spot grows back later.
+  gather: async (ctx) => {
+    const [map, node] = (ctx.arg ?? '').split('.')
+    const item = node?.startsWith('reed') ? 'fiber' : 'wood'
+    const first = !hasFlag(ctx.get(), `seen-item:${item}`)
+    for (let i = 0; i < 3; i += 1) { ctx.ui.sfx(item === 'wood' ? 'chop' : 'rustle'); await wait(200) }
+    ctx.set((save) => setFlag(setFlag(giveItem(save, item, 1), `gathered:${map}.${node}`), `seen-item:${item}`))
+    ctx.ui.sfx('item')
+    if (first) await ctx.ui.show?.({ kind: 'item', item, count: 1 })
+    const bag = ctx.get()
+    await ctx.ui.say([item === 'wood' ? 'Chop, chop, chop! You got 1 wood.' : 'You pulled up the reeds. You got 1 fiber.', `Your bag, in Python: wood = ${itemCount(bag, 'wood')} and fiber = ${itemCount(bag, 'fiber')}`])
+  },
+
+  'bridge-builder': async (ctx) => {
+    const who = 'Bridge Builder Rui'
+    if (hasFlag(ctx.get(), builtFlag('route1'))) {
+      await ctx.ui.say(['What a bridge! Straight planks, tight rope.', 'You are a real maker. Echo Harbor is just across the river!'], who)
+      return
+    }
+    await ctx.ui.say(['Oh no, oh no! Last night\'s storm broke the bridge to Echo Harbor!', 'I know how to build a new one, but I have no materials.', 'Can you help? We need 3 wood and 2 fiber.'], who)
+    await ctx.ui.show?.({ kind: 'item', item: 'wood', count: 3, tag: 'LOOK FOR THIS' })
+    await ctx.ui.say(['Fallen logs give wood. The woods to the west are full of them.'], who)
+    await ctx.ui.show?.({ kind: 'item', item: 'fiber', count: 2, tag: 'LOOK FOR THIS' })
+    await ctx.ui.say(['River reeds give fiber, to make rope.', 'When you have it all, press A at the broken bridge. We build it together, with code!'], who)
+  },
+
+  'bridge-site': async (ctx) => {
+    const recipe = recipes.bridge
+    await ctx.ui.say(['The bridge is broken, and the river is too fast to swim across.'])
+    const built = await ctx.ui.craft?.(recipe.id)
+    if (!built) return
+    ctx.set((save) => setFlag(recipe.needs.reduce((acc, [item, count]) => takeItem(acc, item, count), save), builtFlag(save.map)))
+    ctx.ui.sfx('break')
+    await wait(300)
+    ctx.ui.sfx('fanfare')
+    await ctx.ui.say(['Planks down, rope tied, nails in…', 'You built a new bridge! The way to Echo Harbor is open.'])
+    await ctx.ui.say(['WOOHOO! Best bridge in the valley! Thank you, maker!'], 'Bridge Builder Rui')
+  },
+
   'room-pc': async (ctx) => ctx.ui.say(['Your computer. The wallpaper is a pixel-art pyxie you drew yourself.', 'A sticky note on the screen: "print(\'Good morning!\')"']),
 
   tv: async (ctx) => ctx.ui.say(['A cooking show. The chef is 3D printing a pizza.', 'It looks… crunchy.']),
@@ -146,7 +191,7 @@ export const scripts: Record<string, Script> = {
     await ctx.ui.say(['And these: Bytecubes, to catch wild pyxies. Weaken one first, then throw a cube.', 'You also get a few Patches to heal.'], 'Leo Maker')
     await gift(ctx, 'bytecube', 5)
     await gift(ctx, 'patch', 3)
-    await ctx.ui.say(['Six Lab Masters guard the valley. Each one tests a Python idea with REAL code.', 'Beat all six, and you can enter the Grand Hackathon at the Lourenço Castanho Academy!', 'But Masters only accept trainers with enough Trainer XP. Battle, catch, and learn.', 'Echo Harbor is north, past Route 1. Off you go!'], 'Leo Maker')
+    await ctx.ui.say(['Six Lab Masters guard the valley. Each one tests a Python idea with REAL code.', 'Beat all six, and you can enter the Grand Hackathon at the Lourenço Castanho Academy!', 'But Masters only accept trainers with enough Trainer XP. Battle, catch, and learn.', 'Echo Harbor is north, past Route 1.', 'But last night\'s storm broke the bridge on the way. Rui the builder could use a hand!', 'Off you go!'], 'Leo Maker')
     await ctx.ui.show?.({ kind: 'place', map: 'harbor', note: 'Echo Harbor: go north from Vila Maker, through Route 1.' })
     await ctx.ui.say(['See you at the Hackathon, slowpoke! I\'ll be the champion by then!'], 'Brian')
   },

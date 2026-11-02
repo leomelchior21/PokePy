@@ -140,6 +140,13 @@ export function personUrl(look: Look, dir: Direction = 'down', frame = 0): strin
 // ---------------------------------------------------------------- OBJECTS AND ICONS
 
 const objects: Record<string, { rows: string[]; palette: Palette }> = {
+  // Gathering spots: a fallen log (wood) and a clump of river reeds (fiber).
+  log: { palette: { w: '#8a5a32', d: '#5e3a20', l: '#b07a44', r: '#e2b67a', c: '#c4925a', g: '#5aa646' }, rows: [
+    '................', '................', '................', '................', '......g.........', '.....ggg........', '..llllllllllrr..', '.lwwwwwwwwwrccr.',
+    '.wwwdwwwwdwrcdcr', '.wwwwwwdwwwrccr.', '.ddwwwwwwwwdrr..', '..dddddddddd....', '................', '................', '................', '................'] },
+  reeds: { palette: { g: '#4f9a48', l: '#86cb5e', b: '#8a5a32', d: '#2f7a34' }, rows: [
+    '................', '................', '....b.....b.....', '....b..b..b.....', '....b..b..b.....', '....g..b..g..b..', '...lg..g..g..b..', '...lg.lg.lg..g..',
+    '..l.g.lg.l.g.g..', '..l.glg..l.glg..', '.l..gdg.l..gdg..', '....gdg....gdg..', '...ddddd..ddddd.', '................', '................', '................'] },
   capsule: { palette: { a: '#7b3fd6', b: '#ffd23f', l: '#fff4b0', d: '#4a1f8f' }, rows: [
     '................', '................', '................', '.....aaaaaa.....', '....aaaaaaaa....', '....aallaaaa....', '....aaaaaaaa....', '....dddddddd....',
     '....bbbbbbbb....', '....bblbbbbb....', '....bbbbbbbb....', '.....bbbbbb.....', '................', '................', '................', '................'] },
@@ -177,6 +184,8 @@ const icons: Record<string, { rows: string[]; palette: Palette }> = {
   duck: { palette: { y: '#ffd23f', o: '#ff8b3d', p: '#1b1626', w: '#ffffff' }, rows: ['............', '.....yyy....', '....yyyyy...', '....ypyyyoo.', '....yyyyyoo.', '.....yyyy...', '..y.yyyyyy..', '..yyyyyyyyy.', '..yyyyyyyyy.', '...yyyyyyy..', '....yyyyy...', '............'] },
   cutter: { palette: { a: '#ffd23f', b: '#3a3a48', s: '#d8dde6' }, rows: ['............', '.........ss.', '........sss.', '.......sss..', '......sss...', '.....aaa....', '....aaaa....', '...aaab.....', '..aaab......', '.aaab.......', '.aab........', '............'] },
   arduino: { palette: { a: '#1f6fb8', w: '#ffffff', y: '#ffd23f', r: '#ff3b3b' }, rows: ['............', '.aaaaaaaaaa.', '.awawawawaa.', '.aaaaaaaaaa.', '.aayyaaaaaa.', '.aayyaaarar.', '.aaaaaaaaaa.', '.awawawawaa.', '.aaaaaaaaaa.', '............', '............', '............'] },
+  wood: { palette: { a: '#8a5a32', d: '#5e3a20', r: '#e2b67a', l: '#b07a44' }, rows: ['............', '............', '............', '...aaaaaarr.', '..aaaaaaarlr', '..adaaaadrlr', '..aaaaaaarlr', '...dddddddr.', '............', '............', '............', '............'] },
+  fiber: { palette: { g: '#5aa646', l: '#9ad874', y: '#ffd23f' }, rows: ['............', '....l..l....', '...lg.lg.l..', '...gl.gl.g..', '....gglgg...', '.....ggg....', '....yyyyy...', '.....ggg....', '....gglgg...', '...gl.g.lg..', '..g..g...g..', '............'] },
   codex: { palette: { a: '#7b3fd6', b: '#ffd23f', w: '#ffffff' }, rows: ['............', '..aaaaaaaa..', '..abbbbbba..', '..abwwwwba..', '..abbbbbba..', '..aaaaaaaa..', '..aawwwwaa..', '..aaaaaaaa..', '..aawwwaaa..', '..aaaaaaaa..', '............', '............'] },
 }
 

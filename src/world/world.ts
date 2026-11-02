@@ -37,6 +37,8 @@ export function visible(entity: { showIf?: string; hideIf?: string }, flags: Fla
 
 export const cutFlag = (map: string, x: number, y: number) => `cut:${map}:${x}:${y}`
 export const itemFlag = (id: string) => `item:${id}`
+/** Set once the player builds the bridge site ('b' tiles) on a map. */
+export const builtFlag = (map: string) => `built:${map}`
 
 export interface Occupant { kind: 'npc' | 'thing' | 'sign' | 'item'; id: string }
 
@@ -55,6 +57,7 @@ export function thingsIn(map: GameMap, flags: Flags): Thing[] {
 export function walkable(map: GameMap, x: number, y: number, flags: Flags, positions: NpcPositions = {}): boolean {
   const tile = tileAt(map, x, y)
   if (tile === 'C' && flags.has(cutFlag(map.id, x, y))) return !occupied(map, x, y, flags, positions)
+  if (tile === 'b') return flags.has(builtFlag(map.id)) && !occupied(map, x, y, flags, positions)
   if (blockingTiles.has(tile)) return false
   const building = buildingAt(map, x, y)
   if (building) {

@@ -2,6 +2,7 @@
 // buildings, every tree and bush, and an arrow over the building the story is talking about.
 import type { GameMap } from '../world/types'
 import { mapHeight, mapWidth, tileAt } from '../world/world'
+import { objectCanvas } from './art'
 import { hasCanvas, makeCanvas } from './pixels'
 import { boulderCanvas, bushCanvas, drawFence, tallGrassCanvas, treeCanvas, treeKindFor, TREE_SIZE } from './props'
 import { buildGround, hash, isOutdoor } from './terrain'
@@ -41,6 +42,12 @@ export function placePreview(map: GameMap, flags: ReadonlySet<string>, building?
         const f = (a: number, b: number) => tileAt(map, a, b) === 'F'
         drawFence(ctx, x * 16, y * 16, f(x - 1, y), f(x + 1, y), f(x, y - 1), f(x, y + 1))
       }
+    }
+    // Gathering spots and other objects, so students see what to look for.
+    for (const thing of map.things ?? []) {
+      if (!thing.sprite || thing.sprite.startsWith('pod')) continue
+      const art = objectCanvas(thing.sprite)
+      if (art) ctx.drawImage(art, thing.x * 16, thing.y * 16)
     }
   } else {
     canvas = makeCanvas(w * 16, h * 16)

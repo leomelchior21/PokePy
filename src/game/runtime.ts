@@ -5,7 +5,7 @@
 import { avatarLook } from '../world/looks'
 import { getMap } from '../world/maps'
 import type { GameMap, ItemDef, NpcDef, SignDef, Thing, Trigger } from '../world/types'
-import { buildingAt, cutFlag, delta, facingToward, isGrass, itemFlag, mapHeight, mapWidth, npcsIn, opposite, spottedBy, step, thingsIn, tileAt, visible, walkable, warpAt, type Arrival, type NpcPositions } from '../world/world'
+import { buildingAt, builtFlag, cutFlag, delta, facingToward, isGrass, itemFlag, mapHeight, mapWidth, npcsIn, opposite, spottedBy, step, thingsIn, tileAt, visible, walkable, warpAt, type Arrival, type NpcPositions } from '../world/world'
 import { objectCanvas, personCanvas, pyxieCanvas } from '../engine/art'
 import { Ambient, type View } from '../engine/ambient'
 import { hasCanvas, makeCanvas } from '../engine/pixels'
@@ -29,6 +29,8 @@ export interface RuntimeHooks {
   onItem: (item: ItemDef) => void
   onThing: (thing: Thing) => void
   onCardboard: (x: number, y: number) => void
+  /** The A button on a bridge site that isn't built yet. */
+  onBridge: () => void
   onWildEncounter: (map: GameMap) => void
   onTalkTile: (text: string) => void
   sfx: (name: string) => void
@@ -201,6 +203,7 @@ export class WorldRuntime {
     if (thing) return { kind: 'thing' as const, thing, x: tx * 16 + 8, y: ty * 16 }
     const tile = tileAt(this.map, tx, ty)
     if (tile === 'C' && !flags.has(cutFlag(this.map.id, tx, ty))) return { kind: 'cardboard' as const, tx, ty, x: tx * 16 + 8, y: ty * 16 }
+    if (tile === 'b' && !flags.has(builtFlag(this.map.id))) return { kind: 'bridge' as const, x: tx * 16 + 8, y: ty * 16 }
     if (tile === '~' || tile === 'l') return { kind: 'tile' as const, tile, x: tx * 16 + 8, y: ty * 16 }
     return null
   }
@@ -219,6 +222,7 @@ export class WorldRuntime {
       case 'item': return this.hooks.onItem(found.item)
       case 'thing': return this.hooks.onThing(found.thing)
       case 'cardboard': return this.hooks.onCardboard(found.tx, found.ty)
+      case 'bridge': return this.hooks.onBridge()
       case 'tile':
         if (found.tile === '~') return this.hooks.onTalkTile('The water is calm. A Quotie splashes somewhere far away.')
         return this.hooks.onTalkTile('A laser beam! Don\'t touch it.')
@@ -583,7 +587,7 @@ export class WorldRuntime {
 
   private groundLayer(): { canvas: HTMLCanvasElement; pad: number } {
     const flags = this.flags()
-    const key = `${this.map.id}:${[...flags].filter((flag) => flag.startsWith('cut:') || flag === 'segfault1').join(',')}`
+    const key = `${this.map.id}:${[...flags].filter((flag) => flag.startsWith('cut:') || flag.startsWith('built:') || flag === 'segfault1').join(',')}`
     if (this.ground?.key === key) return { canvas: this.ground.canvas, pad: PAD }
     let canvas: HTMLCanvasElement
     if (isOutdoor(this.map)) canvas = buildGround(this.map, flags, PAD)

@@ -2,12 +2,14 @@
 import { labGates } from '../data/progression'
 import { house, lab, labGate, mart, station } from './interiors'
 import { kid, looks } from './looks'
-import type { GameMap, NpcDef, TrainerDef } from './types'
+import type { GameMap, NpcDef, Thing, TrainerDef } from './types'
 
 const tr = (id: string, title: string, team: TrainerDef['team'], bits: number, intro: string, lose: string, after: string, extra: Partial<TrainerDef> = {}): TrainerDef => ({
   id, title, kind: 'trainer', team, bits, sight: 4, intro, lose, after, ...extra,
 })
 
+/** A spot to gather a material. It hides once gathered and grows back when you come back to the map. */
+const gatherSpot = (map: string, id: string, sprite: 'log' | 'reeds', x: number, y: number): Thing => ({ x, y, sprite, script: `gather:${map}.${id}`, hideIf: `gathered:${map}.${id}` })
 const person = (id: string, name: string, n: number, x: number, y: number, facing: NpcDef['facing'], talk: string[], move: NpcDef['move'] = 'still'): NpcDef => ({ id, name, look: kid(n), x, y, facing, talk, move })
 
 const trainer = (id: string, name: string, n: number, x: number, y: number, facing: NpcDef['facing'], t: TrainerDef): NpcDef => ({ id, name, look: kid(n), x, y, facing, trainer: t })
@@ -43,7 +45,7 @@ const vila: GameMap = {
     { x: 15, y: 2, w: 5, h: 4, kind: 'house', roof: '#3d6fd0', to: 'brian-house', tx: 5, ty: 6 },
     { x: 8, y: 10, w: 8, h: 5, kind: 'makerspace', roof: '#f28c28', label: 'MAKERSPACE', to: 'makerspace', tx: 7, ty: 9 },
   ],
-  edges: [{ side: 'up', to: 'route1', offset: -2 }],
+  edges: [{ side: 'up', to: 'route1', offset: 10 }],
   npcs: [
     person('vila-kid', 'Kid', 4, 6, 17, 'left', ['The fish in this pond are just reflections of clouds.', 'I checked with a print().', 'Leo Maker still won\'t walk past this pond, though.', 'He says the fish "stare at him".']),
     person('vila-gardener', 'Gardener', 9, 20, 12, 'down', ['Leo Maker says every great project starts as cardboard.', 'Then it becomes MORE cardboard. Then a robot.'], 'wander'),
@@ -141,51 +143,74 @@ const basement: GameMap = {
 
 // ---------------------------------------------------------------- ROUTE 1
 
+// Twice the old size: woods to explore in the west, a pond in the east, and a river in the north
+// whose bridge the storm broke. Players gather wood and fiber and build it again with code.
 const route1: GameMap = {
   id: 'route1', name: 'Route 1 · Print Path', area: 'route', music: 'route', outside: 'tree',
   rows: [
-    'TTTTTTTTT::TTTTTTTTT',
-    'TT.......::.......TT',
-    'T,,,,....::....,,,,T',
-    'T,,,,,...::...,,,,,T',
-    'T,,,,....::....,,,,T',
-    'T........::........T',
-    'TLLLLLL..::..LLLLLLT',
-    'T........::........T',
-    'T..f.....::.....f..T',
-    'TTTT.....::.....TTTT',
-    'T,,,,,,..::..,,,,,,T',
-    'T,,,,,,..::..,,,,,,T',
-    'T,,,,,,..::..,,,,,,T',
-    'T........::........T',
-    'T..TT....::....TT..T',
-    'T..TT....::....TT..T',
-    'T........::........T',
-    'T~~~~....::....,,,,T',
-    'T~~~~~...::...,,,,,T',
-    'T~~~~....::....,,,,T',
-    'T........::........T',
-    'TLLLLLLL.::.LLLLLLLT',
-    'T........::........T',
-    'T,,,,,...::...,,,,,T',
-    'T,,,,,...::...,,,,,T',
-    'T..f.....::.....f..T',
-    'TT.......::.......TT',
-    'TTTTTTTTT::TTTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTT::TTTTTTTTTTTTTTTTTTTTT',
+    'TTTT.................::...TTTT..........TTTT',
+    'TTTT.................::...TTTT....f.....TTTT',
+    'T...,,,,,,,,.........::.................TTTT',
+    'T...,,,,,,,,...f.....::........,,,,,,,,,...T',
+    'T...,,,,,,,,.........::........,,,,,,,,,...T',
+    'T...,,,,,,,,.........::........,,,,,,,,,...T',
+    'T....................::........,,,,,,,,,...T',
+    'TTTTT.......,,,,,,...::........,,,,,,,,,...T',
+    'TTTTT...f...,,,,,,...::..............TTTTTTT',
+    'TTTTT.......,,,,,,...::......f.......TTTTTTT',
+    'T...............sssss::sssss...............T',
+    'T~~~~~~~~~~~~~~~~~~~~bb~~~~~~~~~~~~~~~~~~~~T',
+    'T~~~~~~~~~~~~~~~~~~~~bb~~~~~~~~~~~~~~~~~~~~T',
+    'T~~~~~~~~~~~~~~~~~~~~bb~~~~~~~~~~~~~~~~~~~~T',
+    'T..............ssssss::ssssss..............T',
+    'TTTTTTTTTTTTT........::............TTTTTTTTT',
+    'TTTTTT.TTTTTT........::............TTTTTTTTT',
+    'TTTT..f..TTTT.,,,,,,.::............TTTTTTTTT',
+    'TTTT.....TTTT.,,,,,,.::..,,,,,,,...TTTTTTTTT',
+    'TTT...........,,,,,,.::..,,,,,,,.......TTTTT',
+    'TTTT.....TTTT.,,,,,,.::..,,,,,,,.......TTTTT',
+    'TTTT.....TTTT.,,,,,,.::..,,,,,,,.f.....TTTTT',
+    'TTTTT..TTTTTT........::..,,,,,,,.......TTTTT',
+    'TTT..................::................TTTTT',
+    'TTTTT..TTTTTT........::....................T',
+    'TTTTT..TTTTTT.LLLLLL.::.LLLLLLLL...........T',
+    'TTT.....TTTTT........::.............~~~~~..T',
+    'TTT.....TTTTT........::.............~~~~~..T',
+    'TT~~.....TTTT........::.............~~~~~..T',
+    'TT~~....TTTTT.,,,,,,.::..,,,,,,,....~~~~~..T',
+    'TTT.f...TTTTT.,,,,,,.::..,,,,,,,...........T',
+    'TTTTT.TTTTTTT.,,,,,,.::..,,,,,,,...........T',
+    'TTTTTTTTTTTTT.,,,,,,.::..,,,,,,,......f....T',
+    'TTTTTTTTTTTTT........::..,,,,,,,...........T',
+    'TTTTTTT.........TT...::...TT..........TTTTTT',
+    'TTTTTTT......f..TT...::...TT......f...TTTTTT',
+    'TTTTTTT..............::...............TTTTTT',
+    'TTTTTTT..............::...............TTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTT::TTTTTTTTTTTTTTTTTTTTT',
   ],
-  edges: [{ side: 'down', to: 'vila', offset: 2 }, { side: 'up', to: 'harbor', offset: 2 }],
+  edges: [{ side: 'down', to: 'vila', offset: -10 }, { side: 'up', to: 'harbor', offset: -10 }],
   encounters: { rate: 0.12, table: [{ species: 'echobat', min: 2, max: 4, weight: 50 }, { species: 'quotie', min: 2, max: 4, weight: 35 }, { species: 'memoth', min: 3, max: 5, weight: 15 }] },
   npcs: [
-    trainer('r1-tom', 'Maker Kid Tom', 1, 6, 13, 'right', tr('r1-tom', 'Maker Kid', [['echobat', 4]], 60, 'Hey! You have a pyxie too? Let\'s test our code!', 'Whoa, your code compiled faster than mine.', 'Tip: tall grass is where wild pyxies hide.')),
-    trainer('r1-bia', 'Coder Bia', 2, 13, 20, 'left', tr('r1-bia', 'Coder', [['quotie', 4], ['echobat', 3]], 80, 'I just learned print()! Battle me!', 'OK, OK. Quotes matter. I get it.', 'Text inside quotes is printed exactly as written.')),
-    person('r1-guide', 'Guide', 7, 11, 25, 'left', ['Wild pyxies hide in tall grass.', 'Pick a move, solve its challenge, and your pyxie attacks!', 'When a wild pyxie is weak, throw a Bytecube to catch it.']),
+    trainer('r1-tom', 'Maker Kid Tom', 1, 15, 24, 'right', tr('r1-tom', 'Maker Kid', [['echobat', 4]], 60, 'Hey! You have a pyxie too? Let\'s test our code!', 'Whoa, your code compiled faster than mine.', 'Tip: tall grass is where wild pyxies hide.')),
+    trainer('r1-bia', 'Coder Bia', 2, 26, 7, 'left', tr('r1-bia', 'Coder', [['quotie', 4], ['echobat', 3]], 80, 'I just learned print()! Battle me!', 'OK, OK. Quotes matter. I get it.', 'Text inside quotes is printed exactly as written.')),
+    person('r1-guide', 'Guide', 7, 19, 37, 'right', ['Wild pyxies hide in tall grass.', 'Pick a move, solve its challenge, and your pyxie attacks!', 'When a wild pyxie is weak, throw a Bytecube to catch it.', 'And explore! The woods to the west hide all sorts of things.']),
+    { id: 'r1-builder', name: 'Bridge Builder Rui', look: kid(14), x: 24, y: 16, facing: 'left', script: 'bridge-builder' },
   ],
   items: [
-    { id: 'r1-patch', x: 2, y: 8, item: 'patch', count: 2 },
-    { id: 'r1-cube', x: 17, y: 1, item: 'bytecube', count: 2 },
-    { id: 'r1-hidden', x: 1, y: 13, item: 'patch', count: 1, hidden: true },
+    { id: 'r1-patch', x: 34, y: 26, item: 'patch', count: 2 },
+    { id: 'r1-cube', x: 41, y: 5, item: 'bytecube', count: 2 },
+    { id: 'r1-hidden', x: 3, y: 28, item: 'patch', count: 1, hidden: true },
   ],
-  signs: [{ x: 8, y: 26, text: ['ROUTE 1 · PRINT PATH', 'North: Echo Harbor.'] }],
+  // Fallen logs give wood and river reeds give fiber. Some lie on each bank, so nobody gets stuck.
+  things: [
+    ...([[18, 17], [5, 20], [7, 22], [11, 24], [4, 29], [7, 31], [14, 2], [6, 10], [35, 10]] as Array<[number, number]>).map(([x, y], i) => gatherSpot('route1', `log${i}`, 'log', x, y)),
+    ...([[16, 15], [19, 15], [25, 15], [27, 15], [35, 28], [41, 31], [17, 11], [26, 11]] as Array<[number, number]>).map(([x, y], i) => gatherSpot('route1', `reed${i}`, 'reeds', x, y)),
+  ],
+  signs: [
+    { x: 20, y: 36, text: ['ROUTE 1 · PRINT PATH', 'North: Echo Harbor.'] },
+    { x: 20, y: 16, text: ['BRIDGE OUT!', 'The storm broke it. To build a new one: 3 wood + 2 fiber.', 'Fallen logs give wood. River reeds give fiber.'] },
+  ],
 }
 
 // ---------------------------------------------------------------- ECHO HARBOR
@@ -221,7 +246,7 @@ const harbor: GameMap = {
     { x: 2, y: 12, w: 5, h: 4, kind: 'house', roof: '#2fb8b8', to: 'harbor-house', tx: 5, ty: 6 },
     { x: 19, y: 12, w: 4, h: 4, kind: 'house', roof: '#9b59d0', to: 'harbor-house2', tx: 5, ty: 6 },
   ],
-  edges: [{ side: 'down', to: 'route1', offset: -2 }, { side: 'right', to: 'route2', offset: 0 }],
+  edges: [{ side: 'down', to: 'route1', offset: 10 }, { side: 'right', to: 'route2', offset: 0 }],
   npcs: [
     person('harbor-fisher', 'Fisher', 11, 15, 2, 'up', ['I fish for bugs.', 'In code, I mean. The real fish are too fast.', 'Leo Maker came by once. He saw my bucket and ran all the way back to Vila Maker.', 'Grown man. Afraid of a sardine.']),
     person('harbor-sailor', 'Sailor', 5, 8, 4, 'down', ['Marina Echo runs the Lab here.', 'Her pyxies repeat EVERYTHING. Even typos.', 'Beat her and the Echo Badge is yours.'], 'wander'),

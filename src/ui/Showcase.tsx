@@ -17,6 +17,7 @@ const howToUse: Record<string, string> = {
   cube: 'In a battle with a WILD pyxie: weaken it first, then press BAG and throw a cube.',
   battle: 'Use it in battle, from the BAG button, when a challenge is hard.',
   key: 'A special item. You keep it forever.',
+  material: 'A building material. Bring enough to a build site, press A, and build it with code!',
 }
 
 /**
@@ -40,7 +41,7 @@ export function Showcase({ spec, save, onClose }: { spec: ShowSpec; save: SaveSt
     const item = items[spec.item]
     return createPortal(<div className="showcase" role="dialog" aria-label={item.name} onClick={onClose}>
       <div className="showcase__card" onClick={(event) => event.stopPropagation()}>
-        <span className="showcase__tag">NEW ITEM!</span>
+        <span className="showcase__tag">{spec.tag ?? 'NEW ITEM!'}</span>
         <div className="showcase__stage">
           <i className="showcase__rays" aria-hidden="true" />
           <div className="showcase__icon"><ItemIcon icon={item.icon} size={176} /></div>

@@ -15,7 +15,7 @@ import { randomRng } from '../lib/rng'
 import { flushCloud, onSync, saveCloud, saveLocal } from '../save/cloud'
 import type { Direction, SaveState } from '../types'
 import type { GameMap, NpcDef, TrainerDef } from '../world/types'
-import { cutFlag, itemFlag } from '../world/world'
+import { builtFlag, cutFlag, itemFlag } from '../world/world'
 import { CloudBox } from './CloudBox'
 import { Credits } from './Credits'
 import { ChoiceBox, DialogBox } from './Dialog'
@@ -26,6 +26,8 @@ import { DevPanel } from './DevPanel'
 import { Joystick } from './Joystick'
 import { PyxieInspector } from './PyxieInspector'
 import { Showcase } from './Showcase'
+import { CraftBench } from './CraftBench'
+import { recipes } from '../data/recipes'
 import { mapNodes } from '../world/valley'
 import { canUseDevTools } from '../game/chapters'
 import { getMap } from '../world/maps'
@@ -41,6 +43,7 @@ type Overlay =
   | { type: 'badge'; badge: string; resolve: () => void }
   | { type: 'inspect'; species: string; choose?: string; banner?: string; resolve: (chosen: boolean) => void }
   | { type: 'show'; spec: ShowSpec; resolve: () => void }
+  | { type: 'craft'; recipe: string; resolve: (built: boolean) => void }
 
 const keyDir: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' }
 
@@ -84,6 +87,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     flash: async () => { setFlash(true); await new Promise((r) => window.setTimeout(r, 500)); setFlash(false) },
     inspect: (species, options) => new Promise<boolean>((resolve) => setOverlay({ type: 'inspect', species, choose: options?.choose, banner: options?.banner, resolve })),
     show: (spec) => new Promise<void>((resolve) => setOverlay({ type: 'show', spec, resolve })),
+    craft: (recipe) => new Promise<boolean>((resolve) => setOverlay({ type: 'craft', recipe, resolve })),
   }), [])
 
   const say = ui.say
@@ -190,6 +194,9 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
       onEnterMap: (map) => {
         setBanner({ text: map.name, id: Date.now() })
         audio.play(map.music)
+        // Gathering spots grow back every time you arrive.
+        const gathered = `gathered:${map.id}.`
+        if (saveRef.current.flags.some((flag) => flag.startsWith(gathered))) set((s) => ({ ...s, flags: s.flags.filter((flag) => !flag.startsWith(gathered)) }))
         if (hasFlag(saveRef.current, `visited:${map.id}`)) return
         set((s) => setFlag(s, `visited:${map.id}`))
         // The first time a town or route appears, it is shown big: from above, and on the valley map.
@@ -233,6 +240,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
           await say('You cut through the cardboard. Always cut away from your body!')
         })
       },
+      onBridge: () => { if (performance.now() - lastClose.current >= 250) void runScript('bridge-site') },
       onWildEncounter: (map) => void wildEncounter(map),
       onTalkTile: (text) => { if (performance.now() - lastClose.current >= 250) void run(() => say(text)) },
       sfx: (name) => audio.sfx(name),
@@ -299,6 +307,11 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
       place: (map: string, x: number, y: number) => runtimeRef.current?.place(map, x, y, 'down'),
     }
   }, [blackoutNow, closeOverlay, rng, run, runScript, trainerEncounter, ui])
+
+  // Saves from before the Route 1 bridge: anyone past the first Lab already crossed the river.
+  useEffect(() => {
+    if (saveRef.current.badges.length > 0 && !hasFlag(saveRef.current, builtFlag('route1'))) set((s) => setFlag(s, builtFlag('route1')))
+  }, [set])
 
   // The welcome scene on a brand-new save.
   useEffect(() => {
@@ -418,6 +431,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     {overlay?.type === 'credits' && <div className="overlay overlay--battle"><Credits save={save} onClose={() => { const r = overlay.resolve; closeOverlay(); r() }} /></div>}
     {overlay?.type === 'inspect' && <PyxieInspector species={overlay.species} banner={overlay.banner} onClose={() => { const r = overlay.resolve; closeOverlay(); r(false) }}
       actions={overlay.choose ? [{ label: overlay.choose, primary: true, onClick: () => { const r = overlay.resolve; closeOverlay(); r(true) } }, { label: 'NOT YET', onClick: () => { const r = overlay.resolve; closeOverlay(); r(false) } }] : undefined} />}
+    {overlay?.type === 'craft' && <CraftBench recipe={recipes[overlay.recipe]} bag={save.bag} onDone={(built) => { const r = overlay.resolve; closeOverlay(); r(built) }} />}
     {overlay?.type === 'show' && <Showcase spec={overlay.spec} save={save} onClose={() => { const r = overlay.resolve; closeOverlay(); r() }} />}
     {overlay?.type === 'badge' && badgeInfo && <div className="overlay overlay--badge" onClick={() => { const r = overlay.resolve; closeOverlay(); r() }}>
       <div className="badge-award"><BadgeIcon id={badgeInfo.id} size={140} /><small>{badgeInfo.lab.toUpperCase()}</small><h2>{badgeInfo.name}!</h2><p>{badgeInfo.master} recognizes your code.</p><button className="btn btn--primary" autoFocus>AWESOME!</button></div>

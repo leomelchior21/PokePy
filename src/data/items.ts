@@ -1,4 +1,4 @@
-export type ItemUse = 'heal' | 'revive' | 'cube' | 'battle' | 'key'
+export type ItemUse = 'heal' | 'revive' | 'cube' | 'battle' | 'key' | 'material'
 
 export interface ItemInfo {
   id: string
@@ -21,6 +21,8 @@ export const items: Record<string, ItemInfo> = {
   debugduck: { id: 'debugduck', name: 'Debug Duck', price: 0, use: 'battle', icon: 'duck', text: 'Explain your code to the duck. It solves one challenge for you.' },
   boxcutter: { id: 'boxcutter', name: 'Box Cutter', price: 0, use: 'key', icon: 'cutter', text: 'Cuts through cardboard barricades. Always cut away from your body!' },
   lostarduino: { id: 'lostarduino', name: 'Brian\'s Arduino', price: 0, use: 'key', icon: 'arduino', text: 'An Arduino with "BRIAN" written in marker. The LED still blinks.' },
+  wood: { id: 'wood', name: 'Wood', price: 0, use: 'material', icon: 'wood', text: 'A sturdy piece of a fallen tree. Builds bridges and tools.' },
+  fiber: { id: 'fiber', name: 'Fiber', price: 0, use: 'material', icon: 'fiber', text: 'Strong river reeds, twisted into rope.' },
   codex: { id: 'codex', name: 'Codex', price: 0, use: 'key', icon: 'codex', text: 'Leo Maker\'s pyxie encyclopedia. Records every pyxie you meet.' },
 }
 
