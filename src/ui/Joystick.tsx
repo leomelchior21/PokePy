@@ -4,7 +4,7 @@ const RADIUS = 56
 
 /**
  * A floating analog stick. Touch anywhere in its zone: the base appears under the thumb and the knob
- * follows it. The vector goes from -1 to 1 on each axis; past 92% the trainer runs.
+ * follows it. The vector goes from -1 to 1 on each axis; the trainer walks, and the B button runs.
  */
 export function Joystick({ onMove }: { onMove: (x: number, y: number) => void }) {
   const [stick, setStick] = useState<{ ox: number; oy: number; x: number; y: number } | null>(null)

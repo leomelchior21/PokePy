@@ -8,7 +8,7 @@ import { buildingAt, builtFlag, cutFlag, doorOf, mapHeight, mapWidth, step, tile
 import type { Direction } from '../types'
 
 const noFlags = new Set<string>()
-const known = new Set('.,:=sfTt~#rLFPCW_-RKBDXV3GAmclHb'.split(''))
+const known = new Set('.,:=sfTt~#rLFPCW_-RKBDXV3GAmclHbMhgQ'.split(''))
 
 describe('the valley maps', () => {
   it('are rectangles made of known tiles', () => {

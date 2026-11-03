@@ -49,7 +49,7 @@ describe('Pyxies screens', () => {
     fireEvent.click(screen.getByRole('button', { name: 'CODEX' }))
     expect(screen.getByText(/Caught 1 · Total 23/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'TRAINER' }))
-    expect(screen.getByText(/Next: Marina Echo at Echo Harbor Lab needs 120 XP/)).toBeInTheDocument()
+    expect(screen.getByText(/Next: Marina Echo at Echo Harbor Arena needs 120 XP/)).toBeInTheDocument()
   })
 })
 

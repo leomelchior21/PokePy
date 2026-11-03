@@ -20,7 +20,7 @@ export interface CodeDuel {
 const t = (inputs: string | string[], expected: string): DuelTest => ({ inputs: Array.isArray(inputs) ? inputs : [inputs], expected })
 
 export const duels: Record<string, CodeDuel> = {
-  // Lab 1 · Echo Harbor · PRINT
+  // Arena 1 · Echo Harbor · PRINT
   'harbor-bell': {
     id: 'harbor-bell', title: 'The Harbor Bell', scoring: 'lines', inputNames: [],
     prompt: 'The ferry bell rings twice, then announces the ferry. *Print three lines*: [Ding!], [Ding!], [The ferry is here].',
@@ -46,7 +46,7 @@ export const duels: Record<string, CodeDuel> = {
     hints: ['word is a variable: no quotes around it.', 'print(word) twice.'],
   },
 
-  // Lab 2 · Boxford · VAR
+  // Arena 2 · Boxford · VAR
   'two-boxes': {
     id: 'two-boxes', title: 'Two Boxes', inputNames: ['a', 'b'],
     prompt: 'Two whole numbers arrive in boxes a and b. *Replace 0 with a formula that adds them*, store it in result, then print it.',
@@ -72,7 +72,7 @@ export const duels: Record<string, CodeDuel> = {
     hints: ['The order of the prints is the order on screen.', 'print(second) comes first.'],
   },
 
-  // Lab 3 · Stringhaven · TEXT
+  // Arena 3 · Stringhaven · TEXT
   'name-tag': {
     id: 'name-tag', title: 'The Name Tag', inputNames: ['name'],
     prompt: 'A name arrives. *Glue it into one greeting*: for {Bia} print [Hello, Bia!].',
@@ -98,7 +98,7 @@ export const duels: Record<string, CodeDuel> = {
     hints: ['Text + number crashes. str(age) turns it into text.', 'name + " is " + str(age) + " years old"'],
   },
 
-  // Lab 4 · Abacus City · MATH
+  // Arena 4 · Abacus City · MATH
   'pizza-party': {
     id: 'pizza-party', title: 'The Pizza Party', inputNames: ['pizzas', 'eaten'],
     prompt: 'Every pizza has 8 slices. *Store the slices left* in left: all the slices, minus the ones eaten.',
@@ -124,7 +124,7 @@ export const duels: Record<string, CodeDuel> = {
     hints: ['An hour has 60 minutes.', 'total = hours * 60 + minutes'],
   },
 
-  // Lab 5 · Veritas Peak · LOGIC
+  // Arena 5 · Veritas Peak · LOGIC
   'pass-check': {
     id: 'pass-check', title: 'The Pass Check', inputNames: ['score'],
     prompt: 'A score arrives. *Print the comparison* that answers: is the score {50 or more}? Print [True] or [False], not if/else.',
@@ -150,7 +150,7 @@ export const duels: Record<string, CodeDuel> = {
     hints: ['Add first, then compare with ==.', 'print(a + b == 10)'],
   },
 
-  // Lab 6 · Branchwood · BRANCH
+  // Arena 6 · Branchwood · BRANCH
   'coin-muncher': {
     id: 'coin-muncher', title: 'The Coin Muncher', inputNames: ['coins', 'price'],
     prompt: 'Your coins arrive, then the price. {Enough coins to pay}: print [Play!]. {Otherwise}: print [Not enough coins]. *Write the whole if/else.*',

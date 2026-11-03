@@ -6,6 +6,7 @@ import { mapHeight, mapWidth, tileAt } from '../world/world'
 import { makeCanvas } from './pixels'
 import { decorCanvas } from './props'
 import { drawBuilding } from './tiles'
+import { drawTower, drawTowerSite } from './builds'
 
 type Ctx = CanvasRenderingContext2D
 
@@ -87,10 +88,21 @@ export function buildGround(map: GameMap, flags: ReadonlySet<string>, pad: numbe
   const water = field((t) => t === '~' || t === 'P' || t === 'b')
   const depth = field((t) => t === '~' || t === 'P' || t === 'b', true)
   const sand = field((t) => t === 's')
-  const dirt = field((t) => t === ':')
+  const dirt = field((t) => t === ':' || t === 'g')
   const pave = field((t) => t === '=')
   const trees = field((t) => t === 'T')
   const { grass, under } = grassFor(map)
+  // Tall rock walls ('M', and the tower site 'h' cut into them): where each column of wall starts and ends.
+  const isFace = (t: string) => t === 'M' || t === 'h'
+  const faceTop = new Int16Array(w * h).fill(-1)
+  const faceFoot = new Int16Array(w * h).fill(-1)
+  for (let x = 0; x < w; x += 1) for (let y = 0; y < h; y += 1) {
+    if (!isFace(tiles[y * w + x]) || (y > 0 && isFace(tiles[(y - 1) * w + x]))) continue
+    let foot = y
+    while (foot + 1 < h && isFace(tiles[(foot + 1) * w + x])) foot += 1
+    for (let k = y; k <= foot; k += 1) { faceTop[k * w + x] = y; faceFoot[k * w + x] = foot }
+  }
+  const rockShades = rockPalette(map)
   const image = ctx.createImageData(W, H)
   const out = new Uint32Array(image.data.buffer)
   // Cobblestones: a jittered grid of stones, each pixel belongs to the nearest center.
@@ -117,7 +129,10 @@ export function buildGround(map: GameMap, flags: ReadonlySet<string>, pad: numbe
       const edgeNoise = (noise(px, py, 5, 9) - 0.5) * 0.16
       const wv = water(px, py) + edgeNoise * 0.4
       let color: number
-      if (wv > 0.5) {
+      const ti = (py >> 4) * w + (px >> 4)
+      if (faceTop[ti] >= 0) {
+        color = rockFace(px, py, faceTop[ti] * 16, (faceFoot[ti] + 1) * 16, isFace(tile((px >> 4) - 1, py >> 4)), isFace(tile((px >> 4) + 1, py >> 4)), rockShades, grass)
+      } else if (wv > 0.5) {
         const deep = depth(px, py) + (noise(px, py, 14, 4) - 0.5) * 0.12 + ((px + py) & 1) * 0.02
         color = wv < 0.56 ? WATER.foam : wv < 0.64 ? WATER.light : deep > 0.9 ? WATER.deep : WATER.base
         if (color === WATER.base && hash(px >> 2, py, 8) > 0.993) color = WATER.light
@@ -165,12 +180,109 @@ export function buildGround(map: GameMap, flags: ReadonlySet<string>, pad: numbe
   for (let y = -pad; y < h - pad; y += 1) for (let x = -pad; x < w - pad; x += 1) {
     const t = tile(x + pad, y + pad)
     if (t === '#') cliff(ctx, map, x, y, ox(x), oy(y))
+    else if (t === 'h' && tile(x + pad - 1, y + pad) !== 'h' && tile(x + pad, y + pad - 1) !== 'h') {
+      let sw = 1
+      let sh = 1
+      while (tile(x + pad + sw, y + pad) === 'h') sw += 1
+      while (tile(x + pad, y + pad + sh) === 'h') sh += 1
+      if (flags.has(`built:${map.id}`)) drawTower(ctx, ox(x), oy(y), sw * 16, sh * 16)
+      else drawTowerSite(ctx, ox(x), oy(y), sw * 16, sh * 16)
+    } else if (!isFace(t) && isFace(tile(x + pad, y + pad - 1))) cliffFoot(ctx, x, y, ox(x), oy(y))
     else if (t === 'L') ledge(ctx, map, x, y, ox(x), oy(y))
     else if (t === 'P') pier(ctx, map, x, y, ox(x), oy(y))
     else if (t === 'b') { if (flags.has(`built:${map.id}`)) pier(ctx, map, x, y, ox(x), oy(y), true); else brokenBridge(ctx, map, x, y, ox(x), oy(y)) }
   }
   for (const building of map.buildings ?? []) drawBuilding(ctx, building, ox(building.x), oy(building.y), 0)
   return canvas
+}
+
+interface RockShades { ink: number; deep: number; dark: number; mid: number; light: number; shine: number; moss: number; mossLight: number; vine: number }
+
+function rockPalette(map: GameMap): RockShades {
+  const cool = map.area === 'mountain' || map.outside === 'rock'
+  const [ink, deep, dark, mid, light, shine] = (cool
+    ? ['#2a2630', '#4a4650', '#6a6670', '#8c8890', '#aeaab0', '#d2ced2']
+    : ['#2e2420', '#54443c', '#76665a', '#958372', '#b6a28c', '#d8c6aa']).map(rgb)
+  return { ink, deep, dark, mid, light, shine, moss: rgb('#4f8a3a'), mossLight: rgb('#78b04a'), vine: rgb('#3f7a32') }
+}
+
+/**
+ * One pixel of a tall natural rock wall: big fractured slabs (lit on top, shadowed below), thin
+ * strata, moss and hanging vines, a grassy overhang along the top and a dark foot at the bottom.
+ */
+function rockFace(px: number, py: number, top: number, foot: number, openLeft: boolean, openRight: boolean, c: RockShades, grass: number[]): number {
+  const local = py - top
+  const height = foot - top
+  const v = local / height
+  const lip = 3 + Math.floor(hash(px, 0, 71) * 3)
+  const vine = hash(px >> 1, 1, 72) > 0.9 ? lip + 3 + Math.floor(hash(px >> 1, 2, 73) * 12) : 0
+  if (local < lip) return local === 0 ? grass[0] : grass[local < 2 ? 1 : 2]
+  if (local === lip) return c.ink
+  if (vine && local < vine && (px & 1) === 0) return local === vine - 1 ? c.mossLight : (local + (px >> 1)) % 3 ? c.vine : c.moss
+  if (foot - py <= 1) return c.ink
+  if (foot - py <= 3) return c.deep
+  const lx = px & 15
+  if (!openLeft && lx < 1) return c.ink
+  if (!openRight && lx > 14) return c.ink
+  if ((!openLeft && lx < 3) || (!openRight && lx > 12)) return c.dark
+  // Slabs: a stretched Voronoi pattern, so the rock breaks into wide blocks and ledges.
+  const cw = 19
+  const ch = 13
+  const gx = Math.floor(px / cw)
+  const gy = Math.floor(py / ch)
+  let best = Infinity
+  let second = Infinity
+  let id = 0
+  let cy = 0
+  for (let j = -1; j <= 1; j += 1) for (let i = -1; i <= 1; i += 1) {
+    const sx = (gx + i + 0.05 + hash(gx + i, gy + j, 74) * 0.9) * cw
+    const sy = (gy + j + 0.05 + hash(gx + i, gy + j, 75) * 0.9) * ch
+    // Wobbly distance, so slab edges are jagged like broken rock instead of round like cobbles.
+    const d = Math.hypot(px - sx, (py - sy) * 1.5) + (noise(px, py, 3, 82) - 0.5) * 3
+    if (d < best) { second = best; best = d; id = (gx + i) * 53 + (gy + j); cy = sy } else if (d < second) second = d
+  }
+  const gap = second - best
+  if (gap < 0.9) return v < 0.5 && noise(px, py, 6, 76) > 0.62 ? c.moss : c.deep
+  const tones = [c.dark, c.mid, c.mid, c.light]
+  let k = Math.floor(hash(id, 1, 77) * 4)
+  // Each slab is a little ledge: sunlit along its top, in shadow along its underside.
+  if (py < cy - 3 && gap < 3.4) k = 4
+  else if (py > cy + 2 && gap < 3) k = 0
+  // Long vertical fractures that run through several slabs.
+  if (hash(Math.floor(px / 2), Math.floor(py / 26), 83) > 0.985) return c.deep
+  // Darker toward the bottom, lighter near the sunny top.
+  if (v > 0.78 && k > 0) k -= 1
+  if (v < 0.18 && k < 4) k += 1
+  let color = k === 4 ? c.shine : tones[k]
+  // Thin strata running across the whole wall.
+  if ((py + Math.floor(noise(px, 0, 18, 78) * 8)) % 11 === 0 && hash(px, py, 79) > 0.3) color = c.dark
+  if (noise(px, py, 7, 80) > 0.7 && v < 0.6) color = (px + py) & 1 ? c.moss : c.mossLight
+  const r = hash(px, py, 81)
+  if (r > 0.985) color = c.shine
+  else if (r < 0.012) color = c.deep
+  return color
+}
+
+/** Where a rock wall meets the ground below: a soft shadow and a scatter of fallen stones. */
+function cliffFoot(ctx: Ctx, tx: number, ty: number, ox: number, oy: number) {
+  ctx.fillStyle = 'rgba(30, 20, 10, 0.26)'
+  ctx.fillRect(ox, oy, 16, 3)
+  ctx.fillStyle = 'rgba(30, 20, 10, 0.13)'
+  ctx.fillRect(ox, oy + 3, 16, 3)
+  for (let i = 0; i < 3; i += 1) {
+    if (hash(tx, ty, 90 + i) < 0.45) continue
+    const x = ox + Math.floor(hash(tx, ty, 93 + i) * 13)
+    const y = oy + 1 + Math.floor(hash(tx, ty, 96 + i) * 5)
+    const size = 2 + Math.floor(hash(tx, ty, 99 + i) * 2)
+    ctx.fillStyle = '#2e2420'; ctx.fillRect(x - 1, y - 1, size + 2, size + 1)
+    ctx.fillStyle = '#958372'; ctx.fillRect(x, y - 1, size, size)
+    ctx.fillStyle = '#c8b69c'; ctx.fillRect(x, y - 1, size, 1)
+  }
+}
+
+/** One plank tile of a built bridge, for the build animation. */
+export function drawBridgeTile(ctx: Ctx, map: GameMap, tx: number, ty: number, ox: number, oy: number) {
+  pier(ctx, map, tx, ty, ox, oy, true)
 }
 
 /** What the storm left: snapped posts at both banks and one plank drifting in the current. */

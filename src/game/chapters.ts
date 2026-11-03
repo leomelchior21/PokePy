@@ -29,14 +29,14 @@ export const chapters: Chapter[] = [
   { id: 'start', label: 'New adventure', note: 'Wake up at home. Leo Maker is waiting.', map: 'home-2f', x: 2, y: 2, level: 0, badges: [], flags: [], defeated: [], xp: 0 },
   { id: 'starter', label: 'Choose a starter', note: 'The Makerspace, right before the three pods.', map: 'makerspace', x: 7, y: 5, level: 0, badges: [], flags: ['intro_done', 'lab_intro'], defeated: [], xp: 0 },
   { id: 'route1', label: 'Route 1', note: 'Starter in hand, first wild pyxies.', map: 'route1', x: 21, y: 36, level: 6, badges: [], flags: base, defeated: [], xp: 30 },
-  { id: 'echo', label: 'Lab 1 · Marina Echo (print)', note: 'Inside Echo Harbor Lab, gate already open.', map: 'harbor-lab', x: 6, y: 11, level: 11, badges: [], flags: base, defeated: ['r1-tom', 'r1-bia'], xp: labGates.echo },
-  { id: 'box', label: 'Lab 2 · Otto Box (variables)', note: 'Inside Boxford Lab.', map: 'boxford-lab', x: 6, y: 11, level: 16, badges: B.slice(0, 1), flags: base, defeated: [], xp: labGates.box },
+  { id: 'echo', label: 'Arena 1 · Marina Echo (print)', note: 'Inside Echo Harbor Arena, gate already open.', map: 'harbor-lab', x: 6, y: 11, level: 11, badges: [], flags: base, defeated: ['r1-tom', 'r1-bia'], xp: labGates.echo },
+  { id: 'box', label: 'Arena 2 · Otto Box (variables)', note: 'Inside Boxford Arena.', map: 'boxford-lab', x: 6, y: 11, level: 16, badges: B.slice(0, 1), flags: base, defeated: [], xp: labGates.box },
   { id: 'rival2', label: 'Brian on Quote Coast', note: 'Right below the rival battle.', map: 'route3', x: 10, y: 6, level: 18, badges: B.slice(0, 2), flags: base, defeated: [], xp: labGates.box + 300 },
-  { id: 'quote', label: 'Lab 3 · Lia Quote (text)', note: 'Inside Stringhaven Lab.', map: 'stringhaven-lab', x: 6, y: 11, level: 21, badges: B.slice(0, 2), flags: [...base, 'rival2'], defeated: [], xp: labGates.quote },
+  { id: 'quote', label: 'Arena 3 · Lia Quote (text)', note: 'Inside Stringhaven Arena.', map: 'stringhaven-lab', x: 6, y: 11, level: 21, badges: B.slice(0, 2), flags: [...base, 'rival2'], defeated: [], xp: labGates.quote },
   { id: 'cave', label: 'Laser Cutter Cave · Dr. Segfault', note: 'Box Cutter in the bag, cardboard already cut.', map: 'lasercave', x: 20, y: 9, level: 24, badges: B.slice(0, 3), flags: [...base, 'rival2', 'cut:route4:20:4'], defeated: [], xp: labGates.quote + 500 },
-  { id: 'sum', label: 'Lab 4 · Rafa Sum (math)', note: 'Inside Abacus City Lab.', map: 'abacus-lab', x: 6, y: 11, level: 26, badges: B.slice(0, 3), flags: [...base, 'rival2', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: labGates.sum },
-  { id: 'truth', label: 'Lab 5 · Bruna Bool (logic)', note: 'Inside Veritas Peak Lab.', map: 'veritas-lab', x: 6, y: 11, level: 31, badges: B.slice(0, 4), flags: [...base, 'rival2', 'rival3', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: labGates.truth },
-  { id: 'fork', label: 'Lab 6 · Igor Fork (if/else)', note: 'Inside Branchwood Lab.', map: 'branchwood-lab', x: 6, y: 11, level: 36, badges: B.slice(0, 5), flags: [...base, 'rival2', 'rival3', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: labGates.fork },
+  { id: 'sum', label: 'Arena 4 · Rafa Sum (math)', note: 'Inside Abacus City Arena.', map: 'abacus-lab', x: 6, y: 11, level: 26, badges: B.slice(0, 3), flags: [...base, 'rival2', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: labGates.sum },
+  { id: 'truth', label: 'Arena 5 · Bruna Bool (logic)', note: 'Inside Veritas Peak Arena.', map: 'veritas-lab', x: 6, y: 11, level: 31, badges: B.slice(0, 4), flags: [...base, 'rival2', 'rival3', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: labGates.truth },
+  { id: 'fork', label: 'Arena 6 · Igor Fork (if/else)', note: 'Inside Branchwood Arena.', map: 'branchwood-lab', x: 6, y: 11, level: 36, badges: B.slice(0, 5), flags: [...base, 'rival2', 'rival3', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: labGates.fork },
   { id: 'road', label: 'Hackathon Road', note: 'All six badges, heading to the Academy.', map: 'hackroad', x: 10, y: 27, level: 38, badges: B, flags: [...base, 'rival2', 'rival3', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: labGates.fork + 2000 },
   { id: 'finals', label: 'Grand Hackathon finals', note: 'Inside the hall: Segfault, Brian, then Leo Maker.', map: 'hall', x: 7, y: 13, level: 42, badges: B, flags: [...base, 'rival2', 'rival3', 'cut:route4:20:4', 'segfault1'], defeated: ['segfault1'], xp: 14000 },
   { id: 'post', label: 'Post-game · legends', note: 'Champion: the basement hatch and Nullwing are open.', map: 'makerspace', x: 13, y: 8, level: 46, badges: B, flags: [...base, 'rival2', 'rival3', 'rival4', 'segfault1', 'segfault2', 'champion', 'cut:route4:20:4'], defeated: ['segfault1', 'segfault2', 'rival4', 'champion'], xp: 16000 },
@@ -50,6 +50,17 @@ function evolvedAt(species: string, level: number): string {
     current = evolution.to
   }
   return current
+}
+
+/** Build sites a chapter is already past: the Route 1 bridge, the Route 2 tower, the Academy gate. */
+function builtFor(chapter: Chapter): string[] {
+  const at = chapters.indexOf(chapter)
+  const after = (id: string) => at > chapters.findIndex((item) => item.id === id)
+  return [
+    ...(chapter.level && after('route1') ? ['built:route1'] : []),
+    ...(after('echo') ? ['built:route2'] : []),
+    ...(after('road') ? ['built:hackroad'] : []),
+  ]
 }
 
 /** A save for a chapter: a team at the right level, badges, story flags and supplies. */
@@ -70,7 +81,7 @@ export function chapterSave(chapter: Chapter, from: SaveState): SaveState {
     map: chapter.map, x: chapter.x, y: chapter.y, facing: 'up',
     team,
     badges: chapter.badges,
-    flags: [...new Set([...chapter.flags, ...(team.length ? ['starter:sparkit'] : []), ...chapter.badges.map((b) => `badge-${b}`), ...(chapter.level ? visited : []), ...(chapter.level && chapter.id !== 'route1' ? ['built:route1'] : [])])],
+    flags: [...new Set([...chapter.flags, ...(team.length ? ['starter:sparkit'] : []), ...chapter.badges.map((b) => `badge-${b}`), ...(chapter.level ? visited : []), ...builtFor(chapter)])],
     defeated: chapter.defeated,
     trainerXp: chapter.xp,
     bits: 500 + chapter.level * 80,

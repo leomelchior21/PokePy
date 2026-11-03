@@ -118,7 +118,7 @@ export function xpReward(defeated: OwnedPyxie, trainer: boolean): number {
   return Math.floor((species.xpYield * defeated.level) / 5 * (trainer ? 1.5 : 1))
 }
 
-/** Trainer XP: what opens the Lab doors. */
+/** Trainer XP: what opens the Arena doors. */
 export function trainerXpReward(defeated: OwnedPyxie, trainer: boolean): number {
   return Math.floor((getSpecies(defeated.species).xpYield * defeated.level) / 16 * (trainer ? 1.6 : 1)) + 4
 }

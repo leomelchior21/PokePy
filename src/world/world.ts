@@ -6,7 +6,7 @@ import type { Building, GameMap, NpcDef, Thing } from './types'
 
 export const TILE = 16
 
-const blockingTiles = new Set(['T', 't', '~', '#', 'r', 'F', 'W', 'K', 'B', 'D', 'X', 'V', '3', 'G', 'A', 'l', 'C', ' '])
+const blockingTiles = new Set(['T', 't', '~', '#', 'M', 'r', 'F', 'W', 'K', 'B', 'D', 'X', 'V', '3', 'G', 'A', 'l', 'C', ' '])
 const outsideChar: Record<GameMap['outside'], string> = { tree: 'T', water: '~', void: ' ', rock: '#' }
 
 export const delta: Record<Direction, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
@@ -37,7 +37,7 @@ export function visible(entity: { showIf?: string; hideIf?: string }, flags: Fla
 
 export const cutFlag = (map: string, x: number, y: number) => `cut:${map}:${x}:${y}`
 export const itemFlag = (id: string) => `item:${id}`
-/** Set once the player builds the bridge site ('b' tiles) on a map. */
+/** Set once the player builds the build site on a map: the bridge ('b'), the tower ('h') or the catapult and gate ('Q', 'g'). */
 export const builtFlag = (map: string) => `built:${map}`
 
 export interface Occupant { kind: 'npc' | 'thing' | 'sign' | 'item'; id: string }
@@ -57,7 +57,10 @@ export function thingsIn(map: GameMap, flags: Flags): Thing[] {
 export function walkable(map: GameMap, x: number, y: number, flags: Flags, positions: NpcPositions = {}): boolean {
   const tile = tileAt(map, x, y)
   if (tile === 'C' && flags.has(cutFlag(map.id, x, y))) return !occupied(map, x, y, flags, positions)
-  if (tile === 'b') return flags.has(builtFlag(map.id)) && !occupied(map, x, y, flags, positions)
+  // Build sites: a bridge ('b'), a tower up a rock wall ('h') and a gate ('g') open once built;
+  // the catapult's spot ('Q') is free ground until the catapult stands on it.
+  if (tile === 'b' || tile === 'h' || tile === 'g') return flags.has(builtFlag(map.id)) && !occupied(map, x, y, flags, positions)
+  if (tile === 'Q') return !flags.has(builtFlag(map.id)) && !occupied(map, x, y, flags, positions)
   if (blockingTiles.has(tile)) return false
   const building = buildingAt(map, x, y)
   if (building) {

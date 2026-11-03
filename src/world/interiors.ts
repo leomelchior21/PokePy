@@ -107,7 +107,7 @@ export function lab(spec: LabSpec): GameMap {
       { id: `${spec.id}-master`, name: spec.master.name, look: spec.master.look, x: 6, y: 2, facing: 'down', trainer: spec.master.trainer },
       { id: `${spec.id}-t1`, name: spec.trainers[0].name, look: kid(spec.trainers[0].n), x: 3, y: 7, facing: 'right', trainer: spec.trainers[0].trainer },
       { id: `${spec.id}-t2`, name: spec.trainers[1].name, look: kid(spec.trainers[1].n), x: 10, y: 10, facing: 'left', trainer: spec.trainers[1].trainer },
-      { id: `${spec.id}-helper`, name: 'Lab Assistant', look: kid(spec.trainers[1].n + 5), x: 2, y: 11, facing: 'right', talk: spec.helper },
+      { id: `${spec.id}-helper`, name: 'Arena Assistant', look: kid(spec.trainers[1].n + 5), x: 2, y: 11, facing: 'right', talk: spec.helper },
     ],
   }
 }

@@ -9,7 +9,7 @@ const tr = (id: string, title: string, team: TrainerDef['team'], bits: number, i
 })
 
 /** A spot to gather a material. It hides once gathered and grows back when you come back to the map. */
-const gatherSpot = (map: string, id: string, sprite: 'log' | 'reeds', x: number, y: number): Thing => ({ x, y, sprite, script: `gather:${map}.${id}`, hideIf: `gathered:${map}.${id}` })
+const gatherSpot = (map: string, id: string, sprite: 'log' | 'reeds' | 'rocks', x: number, y: number): Thing => ({ x, y, sprite, script: `gather:${map}.${id}`, hideIf: `gathered:${map}.${id}` })
 const person = (id: string, name: string, n: number, x: number, y: number, facing: NpcDef['facing'], talk: string[], move: NpcDef['move'] = 'still'): NpcDef => ({ id, name, look: kid(n), x, y, facing, talk, move })
 
 const trainer = (id: string, name: string, n: number, x: number, y: number, facing: NpcDef['facing'], t: TrainerDef): NpcDef => ({ id, name, look: kid(n), x, y, facing, trainer: t })
@@ -240,16 +240,16 @@ const harbor: GameMap = {
     'TTTTTTTTTTT==TTTTTTTTTTT',
   ],
   buildings: [
-    { x: 2, y: 5, w: 6, h: 4, kind: 'lab', roof: '#ffd23f', label: 'LAB', to: 'harbor-lab', tx: 6, ty: 11, requires: labGate(labGates.echo, 'Marina Echo') },
+    { x: 2, y: 5, w: 6, h: 4, kind: 'lab', roof: '#ffd23f', label: 'ARENA', to: 'harbor-lab', tx: 6, ty: 11, requires: labGate(labGates.echo, 'Marina Echo') },
     { x: 14, y: 5, w: 5, h: 4, kind: 'station', roof: '#e8483f', to: 'harbor-station', tx: 5, ty: 6 },
     { x: 14, y: 12, w: 4, h: 3, kind: 'mart', roof: '#3d7be0', to: 'harbor-mart', tx: 5, ty: 6 },
     { x: 2, y: 12, w: 5, h: 4, kind: 'house', roof: '#2fb8b8', to: 'harbor-house', tx: 5, ty: 6 },
     { x: 19, y: 12, w: 4, h: 4, kind: 'house', roof: '#9b59d0', to: 'harbor-house2', tx: 5, ty: 6 },
   ],
-  edges: [{ side: 'down', to: 'route1', offset: 10 }, { side: 'right', to: 'route2', offset: 0 }],
+  edges: [{ side: 'down', to: 'route1', offset: 10 }, { side: 'right', to: 'route2', offset: 15 }],
   npcs: [
     person('harbor-fisher', 'Fisher', 11, 15, 2, 'up', ['I fish for bugs.', 'In code, I mean. The real fish are too fast.', 'Leo Maker came by once. He saw my bucket and ran all the way back to Vila Maker.', 'Grown man. Afraid of a sardine.']),
-    person('harbor-sailor', 'Sailor', 5, 8, 4, 'down', ['Marina Echo runs the Lab here.', 'Her pyxies repeat EVERYTHING. Even typos.', 'Beat her and the Echo Badge is yours.'], 'wander'),
+    person('harbor-sailor', 'Sailor', 5, 8, 4, 'down', ['Marina Echo runs the Arena here.', 'Her pyxies repeat EVERYTHING. Even typos.', 'Beat her and the Echo Badge is yours.'], 'wander'),
     person('harbor-kid', 'Kid', 13, 20, 16, 'left', ['print("Hello") shows Hello.', 'print(Hello) without quotes? Python panics. Hehe.']),
     { id: 'harbor-bio', name: 'Marine Biologist', look: kid(12), x: 20, y: 4, facing: 'up', script: 'fish-quiz' },
   ],
@@ -257,51 +257,82 @@ const harbor: GameMap = {
 }
 
 const harborLab = lab({
-  id: 'harbor-lab', name: 'Echo Harbor Lab', exit: { map: 'harbor', x: 5, y: 9 }, floor: '#fff4c2',
-  master: { name: 'Marina Echo', look: looks.marina, trainer: { id: 'marina', title: 'Lab Master', kind: 'master', team: [['echobat', 9], ['quotie', 9], ['echobat', 10]], duels: ['harbor-bell', 'lighthouse', 'echo-chamber'], bits: 600, sight: 0, badge: 'echo', reward: { hintlens: 3 },
-    intro: 'Welcome to my Lab! My pyxies only respect REAL code. Write it, and their shields will break.', lose: 'Your prints rang true! Take the Echo Badge.', after: 'Every print() is a promise: what you write is what appears.' } },
+  id: 'harbor-lab', name: 'Echo Harbor Arena', exit: { map: 'harbor', x: 5, y: 9 }, floor: '#fff4c2',
+  master: { name: 'Marina Echo', look: looks.marina, trainer: { id: 'marina', title: 'Arena Master', kind: 'master', team: [['echobat', 9], ['quotie', 9], ['echobat', 10]], duels: ['harbor-bell', 'lighthouse', 'echo-chamber'], bits: 600, sight: 0, badge: 'echo', reward: { hintlens: 3 },
+    intro: 'Welcome to my Arena! My pyxies only respect REAL code. Write it, and their shields will break.', lose: 'Your prints rang true! Take the Echo Badge.', after: 'Every print() is a promise: what you write is what appears.' } },
   trainers: [
-    { name: 'Lab Coder Rui', n: 14, trainer: tr('harbor-t1', 'Lab Coder', [['echobat', 7], ['echobat', 7]], 120, 'Marina taught me to print anything!', 'You print better than me.', 'Marina\'s pyxies use code duels. Real Python!', { sight: 3 }) },
-    { name: 'Lab Coder Jade', n: 15, trainer: tr('harbor-t2', 'Lab Coder', [['quotie', 8]], 120, 'Quotes! Quotes everywhere!', 'Out of quotes...', 'Each print() makes a new line.', { sight: 3 }) },
+    { name: 'Arena Coder Rui', n: 14, trainer: tr('harbor-t1', 'Arena Coder', [['echobat', 7], ['echobat', 7]], 120, 'Marina taught me to print anything!', 'You print better than me.', 'Marina\'s pyxies use code duels. Real Python!', { sight: 3 }) },
+    { name: 'Arena Coder Jade', n: 15, trainer: tr('harbor-t2', 'Arena Coder', [['quotie', 8]], 120, 'Quotes! Quotes everywhere!', 'Out of quotes...', 'Each print() makes a new line.', { sight: 3 }) },
   ],
-  helper: ['This Lab is about print().', 'In a code duel, you write real Python.', 'Each hidden test that passes breaks one shield!'],
+  helper: ['This Arena is about print().', 'In a code duel, you write real Python.', 'Each hidden test that passes breaks one shield!'],
 })
 
 // ---------------------------------------------------------------- ROUTE 2
 
+// Three times the old size. A wall of rock splits the route: Echo Harbor is down in the lowland,
+// Boxford up on the plateau. A rockslide took the old stairs, so players build a tower to climb.
 const route2: GameMap = {
   id: 'route2', name: 'Route 2 · Variable Valley', area: 'route', music: 'route', outside: 'tree',
   rows: [
-    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
-    'T..,,,,,......TT......,,,,,,...T',
-    'T..,,,,,......TT......,,,,,,...T',
-    'T....f.......,,,,.......f......T',
-    'T..TT........,,,,........TT....T',
-    'T..TT..,,,,............,,,,....T',
-    'T.............~~~~.............T',
-    'T.....,,,,...~~~~~~...,,,,.....T',
-    'T.....,,,,....~~~~....,,,,.....T',
-    '::::::::::::::::::::::::::::::::',
-    '::::::::::::::::::::::::::::::::',
-    'T......,,,,,,.......,,,,,,.....T',
-    'T..f...,,,,,,..TT...,,,,,,..f..T',
-    'T......,,,,,,..TT...,,,,,,.....T',
-    'T..............................T',
-    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+    'TTTTTTT.....TTTT........................TTTTTTTT',
+    'TTTTTTT.............,,,,,,,,............TTTTTTTT',
+    'T....f..,,,,,,,.....,,,,,,,,.......f....TTTTTTTT',
+    'T.......,,,,,,,.....,,,,,,,,................TTTT',
+    'T...MMMMM,,,,,,......................r.........T',
+    'T...MMMMMr............f.......::::::::::::::::::',
+    'T..r..........................::::::::::::::::::',
+    'T.........f.....~~~~..........::...............T',
+    'TTT.............~~~~....r.....::..,,,,,,,.TTTTTT',
+    'TTT..............~~........f..::..,,,,,,,.TTTTTT',
+    'TTMM...MMM....MM.....MM.......::..,MMM,,,.MMTTTT',
+    'TMMMMMMMMMMMMMMMMMMMMMMMMMMMMMhhMMMMMMMMMMMMMMMT',
+    'TMMMMMMMMMMMMMMMMMMMMMMMMMMMMMhhMMMMMMMMMMMMMMMT',
+    'TMMMMMMMMMMMMMMMMMMMMMMMMMMMMMhhMMMMMMMMMMMMMMMT',
+    'TMMMMMMMMMMMMMMMMMMMMMMMMMMMMMhhMMMMMMMMMMMMMMMT',
+    'T..MM....MMM.....MM.....MM....::..MM....MM.....T',
+    'TTTT..........r........r......::...rTTT..TTTTTTT',
+    'TTTT.......~~~....,,,,,,,,....::....TTT..TTTTTTT',
+    'TTTT......~~~~~~..,,,,,,,,....::....TTT..TTTTTTT',
+    'TTTT......~~~~~~..,,,,,,,,....::.........TTTTTTT',
+    'TTTT......~~~~~~..............::.........TTTTTTT',
+    'TTTT.......~~~~............r..::.........TTTTTTT',
+    'T...................f.........::.........TTTTTTT',
+    '::::::::::::::::::::::::::::::::.........TTTTTTT',
+    '::::::::::::::::::::::::::::::::.........TTTTTTT',
+    'T................................f.......TTTTTTT',
+    'TTTTT.TTTT...f....................,,,,,,.TTTTTTT',
+    'TTTTT.TTTT......,,,,,,,,,.........,,,,,,.TTTTTTT',
+    'TTTTT.TTTT......,,,,,,,,,.........,,,,,,.TTTTTTT',
+    'TTTTT.TTTT......,,,,,,,,,.f.......,,,,,,.TTTTTTT',
+    'TTTT...TTT......,,,,,,,,,.........,,,,,,.TTTTTTT',
+    'TTTT...TTT............................TTTTTTTTTT',
+    'TTTTTTTTTT..TTTTT.........TTTT........TTTTTTTTTT',
+    'TTTTTTTTTT..TTTTT.........TTTT........TTTTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
   ],
-  edges: [{ side: 'left', to: 'harbor', offset: 0 }, { side: 'right', to: 'boxford', offset: 0 }],
+  edges: [{ side: 'left', to: 'harbor', offset: -15 }, { side: 'right', to: 'boxford', offset: 3 }],
   encounters: { rate: 0.12, table: [{ species: 'memoth', min: 6, max: 9, weight: 40 }, { species: 'echobat', min: 6, max: 9, weight: 25 }, { species: 'quotie', min: 6, max: 9, weight: 25 }, { species: 'modmole', min: 7, max: 9, weight: 10 }] },
   npcs: [
-    trainer('r2-ana', 'Coder Ana', 3, 8, 4, 'down', tr('r2-ana', 'Coder', [['memoth', 8], ['quotie', 7]], 140, 'My Memoth never forgets a value!', 'It forgot how to win...', 'b = a copies the value, not the box!')),
-    trainer('r2-max', 'Maker Max', 16, 20, 14, 'up', tr('r2-max', 'Maker', [['echobat', 8], ['memoth', 9]], 150, 'I built a robot out of a cereal box. Fight it!', 'The cereal box lost.', 'Cardboard is the best prototype material.')),
-    trainer('r2-sam', 'Coder Sam', 17, 27, 6, 'down', tr('r2-sam', 'Coder', [['quotie', 9], ['echobat', 9], ['memoth', 8]], 180, 'Three pyxies, three variables!', 'Reassigned to defeat.', 'A variable keeps only its newest value.', { sight: 3 })),
+    trainer('r2-ana', 'Coder Ana', 3, 12, 26, 'down', tr('r2-ana', 'Coder', [['memoth', 8], ['quotie', 7]], 140, 'My Memoth never forgets a value!', 'It forgot how to win...', 'b = a copies the value, not the box!')),
+    trainer('r2-max', 'Maker Max', 16, 22, 8, 'down', tr('r2-max', 'Maker', [['echobat', 8], ['memoth', 9]], 150, 'I built a robot out of a cereal box. Fight it!', 'The cereal box lost.', 'Cardboard is the best prototype material.')),
+    trainer('r2-sam', 'Coder Sam', 17, 38, 8, 'left', tr('r2-sam', 'Coder', [['quotie', 9], ['echobat', 9], ['memoth', 8]], 180, 'Three pyxies, three variables!', 'Reassigned to defeat.', 'A variable keeps only its newest value.', { sight: 3 })),
+    { id: 'r2-climber', name: 'Climber Tess', look: kid(18), x: 28, y: 17, facing: 'right', script: 'tower-builder' },
   ],
   items: [
-    { id: 'r2-cubes', x: 30, y: 1, item: 'bytecube', count: 3 },
-    { id: 'r2-patch', x: 16, y: 14, item: 'patch', count: 2 },
-    { id: 'r2-hidden', x: 1, y: 14, item: 'supercube', count: 1, hidden: true },
+    { id: 'r2-cubes', x: 44, y: 5, item: 'bytecube', count: 3 },
+    { id: 'r2-patch', x: 39, y: 26, item: 'patch', count: 2 },
+    { id: 'r2-hidden', x: 5, y: 32, item: 'supercube', count: 1, hidden: true },
   ],
-  signs: [{ x: 2, y: 8, text: ['ROUTE 2 · VARIABLE VALLEY', 'Memoths never forget.'] }],
+  // A tower takes a lot of wood. There is enough down below, and enough up on the plateau too.
+  things: [
+    ...([[8, 23], [16, 26], [27, 27], [36, 24], [38, 21], [22, 22], [6, 31], [33, 33], [7, 8], [12, 7], [26, 7], [36, 4], [14, 10], [20, 5]] as Array<[number, number]>).map(([x, y], i) => gatherSpot('route2', `log${i}`, 'log', x, y)),
+    ...([[9, 20], [16, 20], [10, 22], [15, 22], [14, 18], [15, 8], [20, 9], [16, 10]] as Array<[number, number]>).map(([x, y], i) => gatherSpot('route2', `reed${i}`, 'reeds', x, y)),
+  ],
+  signs: [
+    { x: 2, y: 23, text: ['ROUTE 2 · VARIABLE VALLEY', 'East: Boxford, up on the plateau.'] },
+    { x: 32, y: 17, text: ['THE STAIRS ARE GONE!', 'A rockslide took them. To build a climbing tower: 6 wood + 3 fiber.', 'Fallen logs give wood. Reeds by the pond give fiber.'] },
+  ],
 }
 
 // ---------------------------------------------------------------- BOXFORD
@@ -331,12 +362,12 @@ const boxford: GameMap = {
     'TTTTTTTTTTTTTTTTTTTTTTTT',
   ],
   buildings: [
-    { x: 2, y: 3, w: 6, h: 4, kind: 'lab', roof: '#4fa3ff', label: 'LAB', to: 'boxford-lab', tx: 6, ty: 11, requires: labGate(labGates.box, 'Otto Box') },
+    { x: 2, y: 3, w: 6, h: 4, kind: 'lab', roof: '#4fa3ff', label: 'ARENA', to: 'boxford-lab', tx: 6, ty: 11, requires: labGate(labGates.box, 'Otto Box') },
     { x: 15, y: 3, w: 5, h: 4, kind: 'station', roof: '#e8483f', to: 'boxford-station', tx: 5, ty: 6 },
     { x: 15, y: 12, w: 4, h: 3, kind: 'mart', roof: '#3d7be0', to: 'boxford-mart', tx: 5, ty: 6 },
     { x: 2, y: 12, w: 5, h: 4, kind: 'house', roof: '#c98b5e', to: 'boxford-house', tx: 5, ty: 6 },
   ],
-  edges: [{ side: 'left', to: 'route2', offset: 0 }, { side: 'up', to: 'route3', offset: -1 }],
+  edges: [{ side: 'left', to: 'route2', offset: -3 }, { side: 'up', to: 'route3', offset: -1 }],
   npcs: [
     { id: 'brian-boxford', name: 'Brian', look: looks.brian, x: 11, y: 14, facing: 'down', script: 'brian-arduino', hideIf: 'arduino_returned' },
     person('boxford-old', 'Old Maker', 20, 20, 17, 'left', ['In my day, we stored variables on punch cards.', 'Now kids keep them in Memoths. Progress!', 'Ich-thy-o-pho-bia. The fear of fish.', 'Long word. Short story: Leo Maker and one goldfish.']),
@@ -427,7 +458,7 @@ const stringhaven: GameMap = {
     'TTTTTTTTTTT==TTTTTTTTTTT',
   ],
   buildings: [
-    { x: 9, y: 2, w: 6, h: 4, kind: 'lab', roof: '#ff6fae', label: 'LAB', to: 'stringhaven-lab', tx: 6, ty: 11, requires: labGate(labGates.quote, 'Lia Quote') },
+    { x: 9, y: 2, w: 6, h: 4, kind: 'lab', roof: '#ff6fae', label: 'ARENA', to: 'stringhaven-lab', tx: 6, ty: 11, requires: labGate(labGates.quote, 'Lia Quote') },
     { x: 2, y: 2, w: 5, h: 4, kind: 'station', roof: '#e8483f', to: 'stringhaven-station', tx: 5, ty: 6 },
     { x: 17, y: 2, w: 4, h: 3, kind: 'mart', roof: '#3d7be0', to: 'stringhaven-mart', tx: 5, ty: 6 },
     { x: 2, y: 12, w: 5, h: 4, kind: 'house', roof: '#ec6aa8', to: 'stringhaven-house', tx: 5, ty: 6 },
@@ -551,7 +582,7 @@ const abacus: GameMap = {
     'TTTTTTTTTTTTTTTTTTTTTTTT',
   ],
   buildings: [
-    { x: 15, y: 3, w: 6, h: 4, kind: 'lab', roof: '#ff8b3d', label: 'LAB', to: 'abacus-lab', tx: 6, ty: 11, requires: labGate(labGates.sum, 'Rafa Sum') },
+    { x: 15, y: 3, w: 6, h: 4, kind: 'lab', roof: '#ff8b3d', label: 'ARENA', to: 'abacus-lab', tx: 6, ty: 11, requires: labGate(labGates.sum, 'Rafa Sum') },
     { x: 2, y: 3, w: 5, h: 4, kind: 'station', roof: '#e8483f', to: 'abacus-station', tx: 5, ty: 6 },
     { x: 2, y: 12, w: 4, h: 3, kind: 'mart', roof: '#3d7be0', to: 'abacus-mart', tx: 5, ty: 6 },
     { x: 15, y: 12, w: 5, h: 4, kind: 'house', roof: '#f2a93b', to: 'abacus-house', tx: 5, ty: 6 },
@@ -646,7 +677,7 @@ const veritas: GameMap = {
     '###########==###########',
   ],
   buildings: [
-    { x: 9, y: 2, w: 6, h: 4, kind: 'lab', roof: '#5fd17a', label: 'LAB', to: 'veritas-lab', tx: 6, ty: 11, requires: labGate(labGates.truth, 'Bruna Bool') },
+    { x: 9, y: 2, w: 6, h: 4, kind: 'lab', roof: '#5fd17a', label: 'ARENA', to: 'veritas-lab', tx: 6, ty: 11, requires: labGate(labGates.truth, 'Bruna Bool') },
     { x: 2, y: 2, w: 5, h: 4, kind: 'station', roof: '#e8483f', to: 'veritas-station', tx: 5, ty: 6 },
     { x: 17, y: 2, w: 4, h: 3, kind: 'mart', roof: '#3d7be0', to: 'veritas-mart', tx: 5, ty: 6 },
     { x: 2, y: 12, w: 5, h: 4, kind: 'house', roof: '#2fb8b8', to: 'veritas-house', tx: 5, ty: 6 },
@@ -723,14 +754,14 @@ const branchwood: GameMap = {
     'TTTTTTTTTTTTTTTTTTTTTTTT',
   ],
   buildings: [
-    { x: 15, y: 2, w: 6, h: 4, kind: 'lab', roof: '#a57bff', label: 'LAB', to: 'branchwood-lab', tx: 6, ty: 11, requires: labGate(labGates.fork, 'Igor Fork') },
+    { x: 15, y: 2, w: 6, h: 4, kind: 'lab', roof: '#a57bff', label: 'ARENA', to: 'branchwood-lab', tx: 6, ty: 11, requires: labGate(labGates.fork, 'Igor Fork') },
     { x: 2, y: 2, w: 5, h: 4, kind: 'station', roof: '#e8483f', to: 'branchwood-station', tx: 5, ty: 6 },
     { x: 2, y: 12, w: 4, h: 3, kind: 'mart', roof: '#3d7be0', to: 'branchwood-mart', tx: 5, ty: 6 },
     { x: 15, y: 12, w: 5, h: 4, kind: 'house', roof: '#36b26b', to: 'branchwood-house', tx: 5, ty: 6 },
   ],
   edges: [{ side: 'left', to: 'route6', offset: 0 }, { side: 'up', to: 'hackroad', offset: -1 }],
   npcs: [
-    { id: 'steward', name: 'Hackathon Steward', look: looks.steward, x: 13, y: 1, facing: 'left', talk: ['The road north leads to the Lourenço Castanho Grand Hackathon.', 'Only makers with all six Lab Badges may enter.'] },
+    { id: 'steward', name: 'Hackathon Steward', look: looks.steward, x: 13, y: 1, facing: 'left', talk: ['The road north leads to the Lourenço Castanho Grand Hackathon.', 'Only makers with all six Arena Badges may enter.'] },
     person('bw-kid', 'Kid', 32, 8, 14, 'right', ['Igor Fork can write an if inside an else inside an else!', 'I can only write one if. But it\'s a really good if.'], 'wander'),
   ],
   triggers: [{ x: 11, y: 1, w: 2, script: 'steward', unlessFlag: 'badge-fork' }],
@@ -744,11 +775,11 @@ const hackroad: GameMap = {
   rows: [
     '##########::##########',
     '#........#::#........#',
-    '#.,,,,,,.#::#.,,,,,,.#',
+    '#.,,,,,,.#gg#.,,,,,,.#',
     '#.,,,,,,.#::#.,,,,,,.#',
     '#........#::#........#',
     '#####....#::#....#####',
-    '#.........::.........#',
+    '#.........::...QQ....#',
     '#.,,,,,,,.::.,,,,,,,.#',
     '#.,,,,,,,.::.,,,,,,,.#',
     '#.........::.........#',
@@ -779,12 +810,19 @@ const hackroad: GameMap = {
     trainer('hr-ace1', 'Ace Coder Duda', 33, 5, 6, 'right', tr('hr-ace1', 'Ace Coder', [['truthowl', 36], ['splitroot', 36]], 700, 'Only the best reach the Hackathon. Prove it!', 'You ARE one of the best.', 'Good luck at Lourenço Castanho!')),
     trainer('hr-ace2', 'Ace Maker Teo', 34, 16, 13, 'left', tr('hr-ace2', 'Ace Maker', [['memammoth', 37], ['divimole', 37]], 720, 'My robot arm is ready for the Hackathon. Are you?', 'My robot arm waved goodbye.', 'Servo motors turn to an exact angle. Like a robot elbow!')),
     trainer('hr-ace3', 'Ace Coder Malu', 35, 4, 21, 'right', tr('hr-ace3', 'Ace Coder', [['stringra', 37], ['shoutbat', 37], ['splitroot', 38]], 760, 'Three pyxies. Three concepts. Zero bugs.', 'One bug. Mine.', 'Test the edge cases: the exact limit is where bugs hide.')),
+    { id: 'hr-engineer', name: 'Gate Engineer Nico', look: kid(40), x: 12, y: 6, facing: 'left', script: 'catapult-builder' },
     { id: 'hr-grunt', name: 'Bug Brigade Grunt', look: looks.grunt, x: 12, y: 18, facing: 'left', trainer: tr('hr-grunt', 'Bug Brigade', [['divimole', 35], ['stringra', 35]], 600, 'The doctor is already inside the Academy! You\'re too late!', 'Too late for me, at least.', 'Hurry... Dr. Segfault is about to release Nullwing!', { kind: 'villain', sight: 2 }) },
   ],
   items: [
     { id: 'hr-makercube', x: 1, y: 1, item: 'makercube', count: 1 },
     { id: 'hr-bigpatch', x: 20, y: 1, item: 'bigpatch', count: 3 },
     { id: 'hr-revive', x: 1, y: 27, item: 'revivechip', count: 2 },
+  ],
+  // The Bug Brigade locked the Academy gate behind them. Its counterweight basket needs rocks:
+  // build a catapult from wood and stone, and throw them in.
+  things: [
+    ...([[5, 12], [16, 12], [5, 22], [16, 22], [7, 4], [14, 4]] as Array<[number, number]>).map(([x, y], i) => gatherSpot('hackroad', `rock${i}`, 'rocks', x, y)),
+    ...([[2, 6], [19, 9], [3, 16], [18, 16], [6, 25], [15, 27]] as Array<[number, number]>).map(([x, y], i) => gatherSpot('hackroad', `log${i}`, 'log', x, y)),
   ],
 }
 
@@ -815,7 +853,7 @@ const academy: GameMap = {
     'TTTTTTTTTTT==TTTTTTTTTTT',
   ],
   buildings: [
-    { x: 5, y: 1, w: 14, h: 7, kind: 'academy', roof: '#6a2fb8', label: 'LOURENÇO CASTANHO', to: 'hall', tx: 7, ty: 13, requires: { badges: 6, message: 'The Grand Hackathon is for makers with all six Lab Badges.' } },
+    { x: 5, y: 1, w: 14, h: 7, kind: 'academy', roof: '#6a2fb8', label: 'LOURENÇO CASTANHO', to: 'hall', tx: 7, ty: 13, requires: { badges: 6, message: 'The Grand Hackathon is for makers with all six Arena Badges.' } },
     { x: 1, y: 10, w: 5, h: 4, kind: 'station', roof: '#e8483f', to: 'academy-station', tx: 5, ty: 6 },
   ],
   edges: [{ side: 'down', to: 'hackroad', offset: -1 }],
@@ -898,52 +936,52 @@ const academyStation = station('academy-station', 'Lourenço Castanho', { map: '
 const labs: GameMap[] = [
   harborLab,
   lab({
-    id: 'boxford-lab', name: 'Boxford Lab', exit: { map: 'boxford', x: 5, y: 7 }, floor: '#d8ebff',
-    master: { name: 'Otto Box', look: looks.otto, trainer: { id: 'otto', title: 'Lab Master', kind: 'master', team: [['memoth', 15], ['boxlet', 15], ['memoth', 16]], duels: ['two-boxes', 'double-box', 'swap-boxes'], bits: 1000, sight: 0, badge: 'box', reward: { supercube: 3 },
-      intro: 'Hmm. A challenger. Every value in my Lab has a box and a label. Let\'s see if yours do too.', lose: 'Your boxes were perfectly labelled. The Box Badge is yours.', after: 'Name your boxes well, and your code explains itself.' } },
+    id: 'boxford-lab', name: 'Boxford Arena', exit: { map: 'boxford', x: 5, y: 7 }, floor: '#d8ebff',
+    master: { name: 'Otto Box', look: looks.otto, trainer: { id: 'otto', title: 'Arena Master', kind: 'master', team: [['memoth', 15], ['boxlet', 15], ['memoth', 16]], duels: ['two-boxes', 'double-box', 'swap-boxes'], bits: 1000, sight: 0, badge: 'box', reward: { supercube: 3 },
+      intro: 'Hmm. A challenger. Every value in my Arena has a box and a label. Let\'s see if yours do too.', lose: 'Your boxes were perfectly labelled. The Box Badge is yours.', after: 'Name your boxes well, and your code explains itself.' } },
     trainers: [
-      { name: 'Lab Coder Gabi', n: 52, trainer: tr('boxford-t1', 'Lab Coder', [['memoth', 13], ['echobat', 13]], 200, 'My variables are always ready!', 'Reassigned!', 'Otto\'s duels: replace the 0 with the right formula.', { sight: 3 }) },
-      { name: 'Lab Coder Enzo', n: 53, trainer: tr('boxford-t2', 'Lab Coder', [['memoth', 14]], 200, 'Box battle!', 'My box is empty.', 'Use the variable names, not the numbers.', { sight: 3 }) },
+      { name: 'Arena Coder Gabi', n: 52, trainer: tr('boxford-t1', 'Arena Coder', [['memoth', 13], ['echobat', 13]], 200, 'My variables are always ready!', 'Reassigned!', 'Otto\'s duels: replace the 0 with the right formula.', { sight: 3 }) },
+      { name: 'Arena Coder Enzo', n: 53, trainer: tr('boxford-t2', 'Arena Coder', [['memoth', 14]], 200, 'Box battle!', 'My box is empty.', 'Use the variable names, not the numbers.', { sight: 3 }) },
     ],
     helper: ['Otto Box loves variables.', 'His duels give you a program with a box set to 0.', 'Change the formula so every test passes!'],
   }),
   lab({
-    id: 'stringhaven-lab', name: 'Stringhaven Lab', exit: { map: 'stringhaven', x: 12, y: 6 }, floor: '#ffe0ef',
-    master: { name: 'Lia Quote', look: looks.lia, trainer: { id: 'lia', title: 'Lab Master', kind: 'master', team: [['quotie', 20], ['stringra', 21], ['quotie', 21]], duels: ['name-tag', 'full-name', 'age-card'], bits: 1400, sight: 0, badge: 'quote', reward: { boxcutter: 1, bigpatch: 2 },
+    id: 'stringhaven-lab', name: 'Stringhaven Arena', exit: { map: 'stringhaven', x: 12, y: 6 }, floor: '#ffe0ef',
+    master: { name: 'Lia Quote', look: looks.lia, trainer: { id: 'lia', title: 'Arena Master', kind: 'master', team: [['quotie', 20], ['stringra', 21], ['quotie', 21]], duels: ['name-tag', 'full-name', 'age-card'], bits: 1400, sight: 0, badge: 'quote', reward: { boxcutter: 1, bigpatch: 2 },
       intro: 'Darling, words are everything. Glue them right, and my pyxies will listen.', lose: 'Beautifully glued! The Quote Badge, and my Box Cutter. You\'ll need it in Sum Canyon.', after: 'Remember: + glues text, and str() turns numbers into text.' } },
     trainers: [
-      { name: 'Lab Coder Nina', n: 54, trainer: tr('sh-t1', 'Lab Coder', [['quotie', 18], ['quotie', 18]], 300, 'Hello + World!', 'HelloWorld... no space...', 'Lia\'s duels are all about gluing text with +.', { sight: 3 }) },
-      { name: 'Lab Coder Beto', n: 55, trainer: tr('sh-t2', 'Lab Coder', [['stringra', 19]], 300, 'My Stringra hates numbers!', 'It got a TypeError.', 'Text + number crashes. Use str()!', { sight: 3 }) },
+      { name: 'Arena Coder Nina', n: 54, trainer: tr('sh-t1', 'Arena Coder', [['quotie', 18], ['quotie', 18]], 300, 'Hello + World!', 'HelloWorld... no space...', 'Lia\'s duels are all about gluing text with +.', { sight: 3 }) },
+      { name: 'Arena Coder Beto', n: 55, trainer: tr('sh-t2', 'Arena Coder', [['stringra', 19]], 300, 'My Stringra hates numbers!', 'It got a TypeError.', 'Text + number crashes. Use str()!', { sight: 3 }) },
     ],
     helper: ['Lia Quote is the queen of text.', 'Glue pieces with +, and don\'t forget the spaces inside quotes.', 'A number must become text with str() first.'],
   }),
   lab({
-    id: 'abacus-lab', name: 'Abacus City Lab', exit: { map: 'abacus', x: 18, y: 7 }, floor: '#ffe3cc',
-    master: { name: 'Rafa Sum', look: looks.rafa, trainer: { id: 'rafa', title: 'Lab Master', kind: 'master', team: [['modmole', 25], ['plusling', 25], ['divimole', 26]], duels: ['pizza-party', 'taxi-fare', 'clock-tower'], bits: 1800, sight: 0, badge: 'sum', reward: { revivechip: 2 },
+    id: 'abacus-lab', name: 'Abacus City Arena', exit: { map: 'abacus', x: 18, y: 7 }, floor: '#ffe3cc',
+    master: { name: 'Rafa Sum', look: looks.rafa, trainer: { id: 'rafa', title: 'Arena Master', kind: 'master', team: [['modmole', 25], ['plusling', 25], ['divimole', 26]], duels: ['pizza-party', 'taxi-fare', 'clock-tower'], bits: 1800, sight: 0, badge: 'sum', reward: { revivechip: 2 },
       intro: 'Numbers don\'t lie! But they DO add, subtract, multiply and divide. Let\'s calculate!', lose: 'Your math is flawless! Take the Sum Badge.', after: '* and / go before + and -. And / always gives a decimal. Never forget.' } },
     trainers: [
-      { name: 'Lab Coder Duda', n: 56, trainer: tr('ab-t1', 'Lab Coder', [['modmole', 23], ['modmole', 23]], 380, 'Double Modmole, double remainders!', 'Divided and conquered.', 'Rafa\'s duels use + - * and /.', { sight: 3 }) },
-      { name: 'Lab Coder Leo', n: 57, trainer: tr('ab-t2', 'Lab Coder', [['divimole', 24]], 380, 'My name is Leo too! But I\'m not THE Leo.', 'Definitely not the Leo.', 'Python multiplies before it adds.', { sight: 3 }) },
+      { name: 'Arena Coder Duda', n: 56, trainer: tr('ab-t1', 'Arena Coder', [['modmole', 23], ['modmole', 23]], 380, 'Double Modmole, double remainders!', 'Divided and conquered.', 'Rafa\'s duels use + - * and /.', { sight: 3 }) },
+      { name: 'Arena Coder Leo', n: 57, trainer: tr('ab-t2', 'Arena Coder', [['divimole', 24]], 380, 'My name is Leo too! But I\'m not THE Leo.', 'Definitely not the Leo.', 'Python multiplies before it adds.', { sight: 3 }) },
     ],
     helper: ['Rafa Sum is a calculator with legs.', 'His duels need formulas: + - * / // %.', 'Read the recipe in the prompt carefully.'],
   }),
   lab({
-    id: 'veritas-lab', name: 'Veritas Peak Lab', exit: { map: 'veritas', x: 12, y: 6 }, floor: '#d9f7df',
-    master: { name: 'Bruna Bool', look: looks.bruna, trainer: { id: 'bruna', title: 'Lab Master', kind: 'master', team: [['booly', 30], ['truthowl', 31], ['booly', 31]], duels: ['pass-check', 'same-code', 'perfect-ten'], bits: 2200, sight: 0, badge: 'truth', reward: { makercube: 1 },
+    id: 'veritas-lab', name: 'Veritas Peak Arena', exit: { map: 'veritas', x: 12, y: 6 }, floor: '#d9f7df',
+    master: { name: 'Bruna Bool', look: looks.bruna, trainer: { id: 'bruna', title: 'Arena Master', kind: 'master', team: [['booly', 30], ['truthowl', 31], ['booly', 31]], duels: ['pass-check', 'same-code', 'perfect-ten'], bits: 2200, sight: 0, badge: 'truth', reward: { makercube: 1 },
       intro: 'Statement: you will win. True or False? Let\'s find out with code.', lose: 'True! You won. The Truth Badge is yours.', after: 'A comparison is a question. Python always answers True or False.' } },
     trainers: [
-      { name: 'Lab Coder Clara', n: 58, trainer: tr('ve-t1', 'Lab Coder', [['booly', 28], ['booly', 28]], 450, 'True! I mean, battle!', 'False. I mean, I lost.', 'Bruna\'s duels print comparisons directly: print(x >= 50).', { sight: 3 }) },
-      { name: 'Lab Coder Rafael', n: 59, trainer: tr('ve-t2', 'Lab Coder', [['truthowl', 29]], 450, 'My Truthowl never lies!', 'It said I would lose. It was right.', '== compares. Capitals matter in text!', { sight: 3 }) },
+      { name: 'Arena Coder Clara', n: 58, trainer: tr('ve-t1', 'Arena Coder', [['booly', 28], ['booly', 28]], 450, 'True! I mean, battle!', 'False. I mean, I lost.', 'Bruna\'s duels print comparisons directly: print(x >= 50).', { sight: 3 }) },
+      { name: 'Arena Coder Rafael', n: 59, trainer: tr('ve-t2', 'Arena Coder', [['truthowl', 29]], 450, 'My Truthowl never lies!', 'It said I would lose. It was right.', '== compares. Capitals matter in text!', { sight: 3 }) },
     ],
     helper: ['Bruna Bool speaks only True and False.', 'Her duels: print a comparison, no if/else needed.', 'One = stores a value. Two == compare. Don\'t mix them up!'],
   }),
   lab({
-    id: 'branchwood-lab', name: 'Branchwood Lab', exit: { map: 'branchwood', x: 18, y: 6 }, floor: '#e6dcff',
-    master: { name: 'Igor Fork', look: looks.igor, trainer: { id: 'igor', title: 'Lab Master', kind: 'master', team: [['forkit', 35], ['splitroot', 36], ['splitroot', 36]], duels: ['coin-muncher', 'speed-wraith', 'medal-dragon'], bits: 2800, sight: 0, badge: 'fork', reward: { debugduck: 2 },
+    id: 'branchwood-lab', name: 'Branchwood Arena', exit: { map: 'branchwood', x: 18, y: 6 }, floor: '#e6dcff',
+    master: { name: 'Igor Fork', look: looks.igor, trainer: { id: 'igor', title: 'Arena Master', kind: 'master', team: [['forkit', 35], ['splitroot', 36], ['splitroot', 36]], duels: ['coin-muncher', 'speed-wraith', 'medal-dragon'], bits: 2800, sight: 0, badge: 'fork', reward: { debugduck: 2 },
       intro: 'At every fork, one path. if this, else that. Let\'s see which path YOUR code takes.', lose: 'Every branch, perfectly placed. The Fork Badge! The Grand Hackathon awaits.', after: 'An if inside an else is asked only when the first condition was False.' } },
     trainers: [
-      { name: 'Lab Coder Lucas', n: 61, trainer: tr('bw-t1', 'Lab Coder', [['forkit', 33], ['booly', 33]], 520, 'Left or right? Win or lose? Battle!', 'I took the losing branch.', 'Igor\'s duels need if/else. Even nested!', { sight: 3 }) },
-      { name: 'Lab Coder Sofia', n: 62, trainer: tr('bw-t2', 'Lab Coder', [['splitroot', 34]], 520, 'My Splitroot has branches inside branches!', 'Pruned!', 'Indent the inner if 4 spaces, its prints 8.', { sight: 3 }) },
+      { name: 'Arena Coder Lucas', n: 61, trainer: tr('bw-t1', 'Arena Coder', [['forkit', 33], ['booly', 33]], 520, 'Left or right? Win or lose? Battle!', 'I took the losing branch.', 'Igor\'s duels need if/else. Even nested!', { sight: 3 }) },
+      { name: 'Arena Coder Sofia', n: 62, trainer: tr('bw-t2', 'Arena Coder', [['splitroot', 34]], 520, 'My Splitroot has branches inside branches!', 'Pruned!', 'Indent the inner if 4 spaces, its prints 8.', { sight: 3 }) },
     ],
     helper: ['Igor Fork is the master of decisions.', 'His duels: full if/else, sometimes an if inside the else.', 'Check the exact limits: > or >=?'],
   }),

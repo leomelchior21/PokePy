@@ -1,5 +1,5 @@
 // A robot student plays the whole game with the real battle math: every trainer, wild battles
-// until each Lab door opens, catches, rivals and the champion. It checks the game never breaks
+// until each Arena door opens, catches, rivals and the champion. It checks the game never breaks
 // in a late save, and that the adventure lasts about three hours.
 import { describe, expect, it } from 'vitest'
 import { createPyxie, enemyDamage, gainXp, healPyxie, isFainted, moveDamage, pickEnemyMove, statsFor, trainerXpReward, xpReward, catchChance, wildLevel } from '../battle/engine'

@@ -52,6 +52,11 @@ function stepsFor(recipe: Recipe, bag: Record<string, number>): Step[] {
     explain: `${first} - ${need1} takes ${need1} away: ${have1} - ${need1} is ${left}.`,
     enough: true,
   })
+  if (recipe.finale) {
+    const finale = recipe.finale
+    const choices = shuffle(finale.options, have1 + 3)
+    steps.push({ code: finale.code, question: finale.question, options: choices, answer: choices.indexOf(finale.answer), explain: finale.explain, enough: true })
+  }
   return steps
 }
 

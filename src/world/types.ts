@@ -3,6 +3,7 @@ import type { Direction } from '../types'
 /**
  * Outdoor tiles: . grass  , tall grass  : dirt  = paved  s sand  f flowers  T tree  t bush
  * ~ water  # rock  r boulder  L ledge (jump south)  F fence  P pier  C cardboard barricade
+ * M tall rock wall  b bridge site  h tower site  g gate  Q catapult spot (open, walkable or solid once built)
  * Indoor tiles: _ wood floor  - lab floor  R rug  W wall  K shelf  B bed  D desk  X counter
  * V screen/PC  3 3D printer  G plant  A arduino bench  m exit mat  c cave floor  l laser
  */

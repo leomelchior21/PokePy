@@ -2,7 +2,7 @@
 
 An open-world creature-training RPG for the makers of Escola Lourenço Castanho. Pyxies are creatures
 made of Python code. Students explore the Castanho Valley, catch and train pyxies, and battle with
-coding challenges, then face six Lab Masters whose pyxies only fall to real Python code.
+coding challenges, then face six Arena Masters whose pyxies only fall to real Python code.
 
 ## What students do
 
@@ -31,14 +31,19 @@ coding challenges, then face six Lab Masters whose pyxies only fall to real Pyth
   after every catch.
 - **Dodge** enemy attacks with quick True/False questions. Three right answers in a row land a combo.
 - **Catch** wild pyxies: weaken them, then "compile" a Bytecube with one quick question.
-- **Code duels**: Lab Masters, Dr. Segfault and the champion Leo Maker fight with the Final Bosses
+- **Code duels**: Arena Masters, Dr. Segfault and the champion Leo Maker fight with the Final Bosses
   mechanic. Students write real Python in an editor, and every hidden test that passes breaks a shield.
-- **Progress**: Trainer XP opens each Lab, badges open the Grand Hackathon, pyxies level up and evolve.
+- **Progress**: Trainer XP opens each Arena, badges open the Grand Hackathon, pyxies level up and evolve.
 
-- **Build**: some paths need building. On Route 1 the storm broke the bridge to Echo Harbor: students chop
-  fallen logs for wood and pull river reeds for fiber, then build at the Maker Bench, where their bag
-  becomes Python variables and they read the code that checks and spends the materials
-  (`print(wood >= 3)`, `wood = wood - 3`). Gathering spots grow back; recipes live in `src/data/recipes.ts`.
+- **Build**: three paths need building, and each build is checked and paid for in Python at the Maker
+  Bench, where the bag becomes variables (`print(wood >= 6)`, `wood = wood - 6`):
+  - **Route 1 bridge** (3 wood + 2 fiber): the storm broke the way to Echo Harbor.
+  - **Route 2 climbing tower** (6 wood + 3 fiber): a rock wall splits the route and a rockslide took the
+    stairs to Boxford. Bench finale: `levels = wood / 2` prints `3.0`.
+  - **Hackathon Road catapult** (4 wood + 4 stone): the Bug Brigade locked the Academy gate. The catapult
+    throws stones into the gate's counterweight basket. Bench finale: `print(stones * 5 >= 20)`.
+  Every build plays an animation: planks drop in one by one, the tower rises level by level, the catapult
+  assembles, throws four stones and the gate goes up. Logs, reeds and rock piles grow back.
 
 Visual aid comes first: whenever the story gives something new (the Codex, Bytecubes, Patches) or
 names a new place, it is shown big on screen. Items get a spotlit card; places get an aerial view of the
@@ -68,11 +73,12 @@ Everything is drawn in code, so the game ships with no image files:
   that `src/engine/raster.ts` turns into pixel art at any size, with cel shading, dithering and
   selective outlines.
 - The outdoor ground (`src/engine/terrain.ts`) samples smooth fields per pixel, so paths, sand and
-  shores are round and organic; cliffs, ledges and piers are autotiled on top.
+  shores are round and organic; cliffs, ledges and piers are autotiled on top. Tall rock walls (`M`) are
+  painted per pixel too: fractured slabs lit from above, strata, moss, hanging vines and a grassy lip.
 - Ambient life lives in `src/engine/ambient.ts`; people are 16×24 chibi sprites in `src/engine/art.ts`.
 - Rooms (`src/engine/interior.ts`) get wallpaper and wainscoting, curtained windows with sunbeams, plank
   and tile floors, rugs, a doorway full of daylight, and furniture per room type (home, charging
-  station, mart, lab, hackathon hall).
+  station, mart, arena, hackathon hall).
 - Battle scenes (`src/battle/BattleBackdrop.tsx`) are layered and animated for every area: meadows,
   forest god rays, the sea, a crystal cave, a lab, mountains and the hackathon stage.
 - The title screen (`src/ui/TitleScene.tsx`) is the valley at golden hour with parallax layers and
@@ -101,8 +107,51 @@ It adds a separate `pyxies_save` column next to each PixPy student (PixPy progre
 and the `pyxies_load`, `pyxies_save` and `pyxies_hall_of_fame` functions. Until it is applied, the game
 runs normally with device-only saves.
 
+## Extending the game
+
+Notes for the next round of changes, so nobody has to rediscover them.
+
+**Names.** Players see "Arena" for the six badge gyms (Arena Master, Arena Coder). In code they are
+still `lab`: map ids like `harbor-lab`, `area: 'lab'`, the `lab()` helper in `src/world/interiors.ts`.
+Keep the ids, because saves store map ids.
+
+**Teaching rules.** Any Python shown to students uses only `+ - * /` and `== != > >= < <=` (no `//`,
+no `%`), and `/` always prints a decimal (`6 / 2` is `3.0`). New items and places are shown big with
+`ctx.ui.show(...)` the first time they appear. Check new UI at 1180×820 and 820×1180 (iPad).
+
+**Adding a build site** (the pattern used by the bridge, tower and catapult):
+1. Tiles: `b` bridge, `h` tower (cut into an `M` rock wall), `g` gate plus `Q` catapult spot. Their walk
+   rules are in `walkable()` in `src/world/world.ts`; everything is gated by `builtFlag(mapId)`, so a
+   map has at most one build site.
+2. Recipe in `src/data/recipes.ts` (two materials, optional `finale` question) and the map's entry in
+   `siteRecipe`.
+3. Lines in `buildLines` and a builder NPC script in `src/game/scripts.ts`. The `build-site` script
+   runs the bench, takes the materials, calls `ui.build()` (the animation), then sets the flag.
+4. Art in `src/engine/builds.ts`, drawn with a `progress` from 0 to 1. Ground-level builds (bridge,
+   tower) go into the cached ground in `src/engine/terrain.ts` once built and are animated in
+   `drawBuildGround`. Standing builds (gate, catapult) are y-sorted drawables (`catapultDrawables` in
+   `src/game/runtime.ts`). Timings live in `BUILD_MS`.
+5. Gathering spots: `gatherSpot(map, id, 'log' | 'reeds' | 'rocks', x, y)` in `src/world/maps.ts`. The
+   id prefix picks the item (`reed` = fiber, `rock` = stone, anything else = wood). Put enough on
+   both sides of the site so nobody gets stuck.
+6. Old saves: add the map to the migration in `GameScreen.tsx` ("Saves from before the builds") and to
+   `builtFor()` in `src/game/chapters.ts`, so later chapters start with it built.
+
+**Redrawing a map.** Big outdoor maps are generated by small scripts in `tools/maps/`
+(`python tools/maps/route2.py --show` prints the grid with coordinates); paste the output into the
+map's `rows`. When a map changes size, fix the `offset` of the edges on both sides (leaving at row `y`
+lands on row `y + offset`). The maps test checks that every edge lands on open ground and that every map
+can be reached on foot. Players saved inside a wall are moved to the nearest open tile (`unstick()`).
+
+**Seeing it.** `npm run dev`, then `?chapter=<id>`. In development `window.__pyxies` has `place(map,
+x, y)`, `script(id)`, `wild(species, level)` and `trainer(npcId)` for automated screenshots; the
+teacher tools (DEV button) can fill the bag.
+
+**Touch movement.** The joystick walks at most `STICK_WALK` px/s and eases in (`STICK_ACCEL`); the B
+button runs at `STICK_RUN`. The keyboard uses `WALK` and `RUN` (`src/game/runtime.ts`).
+
 ## Tuning
 
-- Lab XP gates: `src/data/progression.ts` (the robot playthrough in `src/game/progression.test.ts`
+- Arena XP gates: `src/data/progression.ts` (the robot playthrough in `src/game/progression.test.ts`
   reports the estimated play time).
 - Code duels: `src/data/duels.ts`. Maps, trainers and dialog: `src/world/maps.ts`. Story: `src/game/scripts.ts`.

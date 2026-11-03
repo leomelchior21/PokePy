@@ -1,6 +1,6 @@
 import { badges } from '../data/progression'
 
-/** Badges as small SVG medals, one shape per Lab. */
+/** Badges as small SVG medals, one shape per Arena. */
 export function BadgeIcon({ id, size = 48, locked = false }: { id: string; size?: number; locked?: boolean }) {
   const badge = badges.find((item) => item.id === id)
   if (!badge) return null

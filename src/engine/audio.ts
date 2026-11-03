@@ -341,6 +341,9 @@ class Chiptune {
       case 'step-dirt': this.noise(t, 0.045, 0.09, 900); break
       case 'step-floor': this.tone(170 + Math.random() * 30, t, 0.03, 'triangle', 0.12, m); break
       case 'rustle': this.noise(t, 0.16, 0.12, 3200); this.noise(t + 0.05, 0.1, 0.08, 4200); break
+      case 'hammer': this.noise(t, 0.04, 0.3, 1800); this.tone(520, t, 0.05, 'square', 0.12, m, 300); break
+      case 'thud': this.noise(t, 0.18, 0.45, 400); this.tone(90, t, 0.18, 'square', 0.2, m, 50); break
+      case 'creak': this.tone(150 + Math.random() * 40, t, 0.12, 'square', 0.08, m, 120); this.noise(t, 0.08, 0.1, 2400); break
       case 'chop': this.noise(t, 0.06, 0.35, 700); this.tone(150, t, 0.07, 'square', 0.16, m, 80); break
       case 'splash': this.noise(t, 0.2, 0.14, 1200); this.tone(600, t, 0.12, 'sine', 0.08, m, 300); break
     }

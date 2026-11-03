@@ -147,6 +147,9 @@ const objects: Record<string, { rows: string[]; palette: Palette }> = {
   reeds: { palette: { g: '#4f9a48', l: '#86cb5e', b: '#8a5a32', d: '#2f7a34' }, rows: [
     '................', '................', '....b.....b.....', '....b..b..b.....', '....b..b..b.....', '....g..b..g..b..', '...lg..g..g..b..', '...lg.lg.lg..g..',
     '..l.g.lg.l.g.g..', '..l.glg..l.glg..', '.l..gdg.l..gdg..', '....gdg....gdg..', '...ddddd..ddddd.', '................', '................', '................'] },
+  rocks: { palette: { k: '#2e2420', d: '#6e6862', m: '#9a948c', l: '#d4cec4', g: '#78b04a' }, rows: [
+    '................', '................', '................', '................', '................', '......kkkk......', '.....kmmlmk.....', '....kmlmmmdk....',
+    '..kkkmmmmddkkk..', '.kmlmkddddkmlmk.', '.kmmmmkkkkmmmdk.', '.kdmmddk.kmmddk.', '..kkkkk...kkkkg.', '.g...........g..', '................', '................'] },
   capsule: { palette: { a: '#7b3fd6', b: '#ffd23f', l: '#fff4b0', d: '#4a1f8f' }, rows: [
     '................', '................', '................', '.....aaaaaa.....', '....aaaaaaaa....', '....aallaaaa....', '....aaaaaaaa....', '....dddddddd....',
     '....bbbbbbbb....', '....bblbbbbb....', '....bbbbbbbb....', '.....bbbbbb.....', '................', '................', '................', '................'] },
@@ -185,6 +188,7 @@ const icons: Record<string, { rows: string[]; palette: Palette }> = {
   cutter: { palette: { a: '#ffd23f', b: '#3a3a48', s: '#d8dde6' }, rows: ['............', '.........ss.', '........sss.', '.......sss..', '......sss...', '.....aaa....', '....aaaa....', '...aaab.....', '..aaab......', '.aaab.......', '.aab........', '............'] },
   arduino: { palette: { a: '#1f6fb8', w: '#ffffff', y: '#ffd23f', r: '#ff3b3b' }, rows: ['............', '.aaaaaaaaaa.', '.awawawawaa.', '.aaaaaaaaaa.', '.aayyaaaaaa.', '.aayyaaarar.', '.aaaaaaaaaa.', '.awawawawaa.', '.aaaaaaaaaa.', '............', '............', '............'] },
   wood: { palette: { a: '#8a5a32', d: '#5e3a20', r: '#e2b67a', l: '#b07a44' }, rows: ['............', '............', '............', '...aaaaaarr.', '..aaaaaaarlr', '..adaaaadrlr', '..aaaaaaarlr', '...dddddddr.', '............', '............', '............', '............'] },
+  stone: { palette: { k: '#2e2420', d: '#6e6862', m: '#9a948c', l: '#d4cec4' }, rows: ['............', '............', '....kkkk....', '...kmmllk...', '..kmmlmmmk..', '..kmmmmmdk..', '.kmmmmmddmk.', '.kdmmmdddmk.', '.kddddddddk.', '..kkkkkkkk..', '............', '............'] },
   fiber: { palette: { g: '#5aa646', l: '#9ad874', y: '#ffd23f' }, rows: ['............', '....l..l....', '...lg.lg.l..', '...gl.gl.g..', '....gglgg...', '.....ggg....', '....yyyyy...', '.....ggg....', '....gglgg...', '...gl.g.lg..', '..g..g...g..', '............'] },
   codex: { palette: { a: '#7b3fd6', b: '#ffd23f', w: '#ffffff' }, rows: ['............', '..aaaaaaaa..', '..abbbbbba..', '..abwwwwba..', '..abbbbbba..', '..aaaaaaaa..', '..aawwwwaa..', '..aaaaaaaa..', '..aawwwaaa..', '..aaaaaaaa..', '............', '............'] },
 }

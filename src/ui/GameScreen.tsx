@@ -88,6 +88,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     inspect: (species, options) => new Promise<boolean>((resolve) => setOverlay({ type: 'inspect', species, choose: options?.choose, banner: options?.banner, resolve })),
     show: (spec) => new Promise<void>((resolve) => setOverlay({ type: 'show', spec, resolve })),
     craft: (recipe) => new Promise<boolean>((resolve) => setOverlay({ type: 'craft', recipe, resolve })),
+    build: () => runtimeRef.current?.playBuild() ?? Promise.resolve(),
   }), [])
 
   const say = ui.say
@@ -240,7 +241,7 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
           await say('You cut through the cardboard. Always cut away from your body!')
         })
       },
-      onBridge: () => { if (performance.now() - lastClose.current >= 250) void runScript('bridge-site') },
+      onBuildSite: () => { if (performance.now() - lastClose.current >= 250) void runScript('build-site') },
       onWildEncounter: (map) => void wildEncounter(map),
       onTalkTile: (text) => { if (performance.now() - lastClose.current >= 250) void run(() => say(text)) },
       sfx: (name) => audio.sfx(name),
@@ -308,9 +309,15 @@ export function GameScreen({ initial, onQuit, onRestart }: { initial: SaveState;
     }
   }, [blackoutNow, closeOverlay, rng, run, runScript, trainerEncounter, ui])
 
-  // Saves from before the Route 1 bridge: anyone past the first Lab already crossed the river.
+  // Saves from before the builds: anyone past a build site already got through it.
   useEffect(() => {
-    if (saveRef.current.badges.length > 0 && !hasFlag(saveRef.current, builtFlag('route1'))) set((s) => setFlag(s, builtFlag('route1')))
+    const save = saveRef.current
+    const past: Array<[string, boolean]> = [
+      ['route1', save.badges.length > 0],
+      ['route2', save.badges.length > 1],
+      ['hackroad', save.map === 'academy' || save.map === 'hall' || hasFlag(save, 'segfault2') || hasFlag(save, 'champion')],
+    ]
+    for (const [map, through] of past) if (through && !hasFlag(saveRef.current, builtFlag(map))) set((s) => setFlag(s, builtFlag(map)))
   }, [set])
 
   // The welcome scene on a brand-new save.

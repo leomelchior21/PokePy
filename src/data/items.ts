@@ -23,6 +23,7 @@ export const items: Record<string, ItemInfo> = {
   lostarduino: { id: 'lostarduino', name: 'Brian\'s Arduino', price: 0, use: 'key', icon: 'arduino', text: 'An Arduino with "BRIAN" written in marker. The LED still blinks.' },
   wood: { id: 'wood', name: 'Wood', price: 0, use: 'material', icon: 'wood', text: 'A sturdy piece of a fallen tree. Builds bridges and tools.' },
   fiber: { id: 'fiber', name: 'Fiber', price: 0, use: 'material', icon: 'fiber', text: 'Strong river reeds, twisted into rope.' },
+  stone: { id: 'stone', name: 'Stone', price: 0, use: 'material', icon: 'stone', text: 'A heavy mountain rock. Each one weighs 5 kg.' },
   codex: { id: 'codex', name: 'Codex', price: 0, use: 'key', icon: 'codex', text: 'Leo Maker\'s pyxie encyclopedia. Records every pyxie you meet.' },
 }
 

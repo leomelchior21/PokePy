@@ -10,7 +10,8 @@ import { objectCanvas, personCanvas, pyxieCanvas } from '../engine/art'
 import { Ambient, type View } from '../engine/ambient'
 import { hasCanvas, makeCanvas } from '../engine/pixels'
 import { boulderCanvas, bushCanvas, drawFence, TREE_SIZE, tallGrassCanvas, treeCanvas, treeKindFor } from '../engine/props'
-import { buildGround, hash, isOutdoor } from '../engine/terrain'
+import { buildGround, drawBridgeTile, hash, isOutdoor } from '../engine/terrain'
+import { catapultBucket, drawBasket, drawCatapult, drawGate, drawRock, drawTower, stage } from '../engine/builds'
 import { drawScreenTile, drawSunbeams } from '../engine/interior'
 import { drawBuilding, drawTile } from '../engine/tiles'
 import type { Direction, SaveState } from '../types'
@@ -29,18 +30,55 @@ export interface RuntimeHooks {
   onItem: (item: ItemDef) => void
   onThing: (thing: Thing) => void
   onCardboard: (x: number, y: number) => void
-  /** The A button on a bridge site that isn't built yet. */
-  onBridge: () => void
+  /** The A button on a build site that isn't built yet: a bridge, a tower or a gate. */
+  onBuildSite: () => void
   onWildEncounter: (map: GameMap) => void
   onTalkTile: (text: string) => void
   sfx: (name: string) => void
 }
+
+/** A map's build site, worked out from its tiles. */
+interface Site {
+  kind: 'bridge' | 'tower' | 'catapult'
+  /** Bridge planks, nearest to the player first when the build starts. */
+  tiles: Array<{ x: number; y: number }>
+  /** The site's footprint in tiles. */
+  x: number; y: number; w: number; h: number
+  /** Hackathon Road: the gate's first tile and the catapult's spot. */
+  gate?: { x: number; y: number }
+  spot?: { x: number; y: number }
+}
+
+function findSite(map: GameMap): Site | null {
+  const of = (char: string) => map.rows.flatMap((row, y) => [...row].flatMap((t, x) => (t === char ? [{ x, y }] : [])))
+  const box = (list: Array<{ x: number; y: number }>) => {
+    const xs = list.map((p) => p.x)
+    const ys = list.map((p) => p.y)
+    return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs) + 1, h: Math.max(...ys) - Math.min(...ys) + 1 }
+  }
+  const planks = of('b')
+  if (planks.length) return { kind: 'bridge', tiles: planks, ...box(planks) }
+  const tower = of('h')
+  if (tower.length) return { kind: 'tower', tiles: tower, ...box(tower) }
+  const gate = of('g')
+  const spot = of('Q')
+  if (gate.length && spot.length) return { kind: 'catapult', tiles: gate, ...box(gate), gate: gate[0], spot: spot[0] }
+  return null
+}
+
+/** How long each build animation lasts, in ms. The catapult builds, throws four stones, then the gate rises. */
+const BUILD_MS = { bridge: 2600, tower: 3400, catapult: 7800 }
+const CATAPULT = { assemble: 2000, throw: 1000, throws: 4, lift: 1600 }
 
 interface Mover { x: number; y: number; fromX: number; fromY: number; t: number; duration: number; jump: boolean }
 interface Hop { fromX: number; fromY: number; toX: number; toY: number; t: number; duration: number }
 
 const WALK = 84
 const RUN = 148
+const STICK_WALK = 72
+const STICK_RUN = 116
+/** How fast the stick speeds up, in pixels per second, each second. */
+const STICK_ACCEL = 420
 const NPC_WALK_MS = 270
 /** Feet box around the player's position: half width, and how far it reaches up and down. */
 const BOX = { half: 5, up: 4, down: 3 }
@@ -61,6 +99,8 @@ export class WorldRuntime {
   held: Direction[] = []
   stick = { x: 0, y: 0 }
   running = false
+  /** The current speed, so the stick can ease in. */
+  private pace = 0
   /** True while a dialog, menu or battle owns the screen. */
   busy = false
   stepCount = 0
@@ -93,6 +133,9 @@ export class WorldRuntime {
   private buffer: HTMLCanvasElement | null = null
   private exitCache: { id: string; list: Array<{ x: number; y: number; dir: Direction }> } | null = null
   private exitArt: HTMLCanvasElement | null = null
+  private siteCache: { id: string; site: Site | null } | null = null
+  /** The build animation that is playing. It holds its last frame until the built flag is set. */
+  private building: { site: Site; t: number; duration: number; resolve: () => void; resolved: boolean; beat: number; heldMs: number } | null = null
 
   constructor(hooks: RuntimeHooks) {
     this.hooks = hooks
@@ -106,7 +149,170 @@ export class WorldRuntime {
     this.lastTile = { x: save.x, y: save.y }
     this.ambient = new Ambient(this.map, isOutdoor(this.map))
     this.resetNpcs()
+    this.unstick()
   }
+
+  /** A save from before a map was redrawn can stand inside a wall: step to the nearest open tile. */
+  private unstick() {
+    const flags = this.flags()
+    if (walkable(this.map, this.x, this.y, flags)) return
+    for (let r = 1; r < 12; r += 1) for (let dy = -r; dy <= r; dy += 1) for (let dx = -r; dx <= r; dx += 1) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue
+      const x = this.x + dx
+      const y = this.y + dy
+      if (x < 0 || y < 0 || x >= mapWidth(this.map) || y >= mapHeight(this.map) || !walkable(this.map, x, y, flags)) continue
+      this.x = x; this.y = y; this.px = x * 16 + 8; this.py = y * 16 + FEET; this.lastTile = { x, y }
+      this.hooks.onMoved(this.map.id, x, y, this.facing, 0)
+      return
+    }
+  }
+
+  private site(): Site | null {
+    if (this.siteCache?.id !== this.map.id) this.siteCache = { id: this.map.id, site: findSite(this.map) }
+    return this.siteCache.site
+  }
+
+  /**
+   * Plays the build on this map's site: planks laid one by one, a tower rising level by level, or a
+   * catapult that assembles and throws stones until the gate goes up. The script sets the built flag
+   * when it resolves; until then the last frame stays on screen.
+   */
+  playBuild(): Promise<void> {
+    const site = this.site()
+    if (!site || !hasCanvas()) return Promise.resolve()
+    if (site.kind === 'bridge') {
+      const near = (p: { x: number; y: number }) => Math.hypot(p.x * 16 + 8 - this.px, p.y * 16 + 8 - this.py)
+      site.tiles = [...site.tiles].sort((a, b) => near(a) - near(b))
+    }
+    return new Promise<void>((resolve) => { this.building = { site, t: 0, duration: BUILD_MS[site.kind], resolve, resolved: false, beat: -1, heldMs: 0 } })
+  }
+
+  private updateBuild(dt: number) {
+    const build = this.building
+    if (!build) return
+    if (build.resolved) {
+      build.heldMs += dt
+      if (this.flags().has(builtFlag(this.map.id)) || build.heldMs > 1500) this.building = null
+      return
+    }
+    build.t = Math.min(build.duration, build.t + dt)
+    const { site, t } = build
+    if (site.kind === 'bridge') {
+      // One beat per plank: it drops into place with a knock and a puff of dust.
+      const each = (build.duration - 400) / site.tiles.length
+      const beat = Math.floor(t / each)
+      if (beat !== build.beat && beat < site.tiles.length) {
+        build.beat = beat
+        const tile = site.tiles[beat]
+        this.hooks.sfx(beat === 0 ? 'splash' : 'hammer')
+        this.ambient.burst('dust', tile.x * 16 + 8, tile.y * 16 + 12, 3)
+      }
+    } else if (site.kind === 'tower') {
+      const beat = Math.floor(t / 210)
+      if (beat !== build.beat && t < build.duration - 300) {
+        build.beat = beat
+        const k = Math.min(1, t / (build.duration - 400))
+        const top = (site.y + site.h) * 16 - (site.h * 16 + 6) * k
+        this.hooks.sfx(beat % 4 === 3 ? 'chop' : 'hammer')
+        this.ambient.burst('dust', site.x * 16 + 4 + Math.random() * (site.w * 16 - 8), top + 2, 2)
+      }
+    } else {
+      const { assemble, throw: each, throws } = CATAPULT
+      const spot = site.spot!
+      let beat: number
+      if (t < assemble) beat = Math.floor(t / 250)
+      else if (t < assemble + each * throws) {
+        // Three beats per throw: reload (silent), release, and the stone landing in the basket.
+        const u = ((t - assemble) / each) % 1
+        beat = 100 + Math.floor((t - assemble) / each) * 3 + (u >= 0.85 ? 2 : u >= 0.42 ? 1 : 0)
+      }
+      else beat = 200 + Math.floor((t - assemble - each * throws) / 180)
+      if (beat !== build.beat) {
+        build.beat = beat
+        if (beat < 100) { this.hooks.sfx('hammer'); this.ambient.burst('dust', spot.x * 16 + 16, spot.y * 16 + 12, 2) }
+        else if (beat < 200) {
+          const phase = (beat - 100) % 3
+          if (phase === 1) this.hooks.sfx('throw')
+          else if (phase === 2) { this.hooks.sfx('thud'); const g = site.gate!; this.ambient.burst('dust', g.x * 16 + 50, g.y * 16 + 4, 3) }
+        } else if (t < build.duration - 100) this.hooks.sfx('creak')
+      }
+    }
+    if (build.t >= build.duration) {
+      build.resolved = true
+      build.resolve()
+    }
+  }
+
+  /** Bridge planks and tower levels: part of the ground, under everyone's feet. */
+  private drawBuildGround(ctx: CanvasRenderingContext2D) {
+    const build = this.building
+    if (!build || this.flags().has(builtFlag(this.map.id))) return
+    const { site, t } = build
+    if (site.kind === 'bridge') {
+      const each = (build.duration - 400) / site.tiles.length
+      site.tiles.forEach((tile, i) => {
+        const k = Math.min(1, Math.max(0, (t - i * each) / 260))
+        if (k <= 0) return
+        const lift = Math.round((1 - k) * (1 - k) * 12)
+        if (lift > 0) { ctx.fillStyle = 'rgba(20, 40, 80, 0.25)'; ctx.fillRect(tile.x * 16 + 2, tile.y * 16 + 3, 14, 14) }
+        drawBridgeTile(ctx, this.map, tile.x, tile.y, tile.x * 16, tile.y * 16 - lift)
+      })
+    } else if (site.kind === 'tower') {
+      const k = Math.min(1, t / (build.duration - 400))
+      drawTower(ctx, site.x * 16, site.y * 16, site.w * 16, site.h * 16, 1 - Math.pow(1 - k, 1.6))
+    }
+  }
+
+  /** The gate and catapult on Hackathon Road: shut and empty, mid-build, or open with the catapult beside it. */
+  private catapultDrawables(flags: ReadonlySet<string>): Array<{ y: number; draw: (ctx: CanvasRenderingContext2D) => void }> {
+    const site = this.site()
+    if (site?.kind !== 'catapult') return []
+    const gate = site.gate!
+    const spot = site.spot!
+    const built = flags.has(builtFlag(this.map.id))
+    const build = this.building?.site === site && !built ? this.building : null
+    const { assemble, throw: each, throws, lift: liftMs } = CATAPULT
+    const t = build?.t ?? 0
+    const gx = (gate.x - 1) * 16
+    const gy = gate.y * 16 - 15
+    const cx = spot.x * 16
+    const cy = spot.y * 16 - 4
+    // Where the basket hangs: high while empty, low once the stones are in and the gate is up.
+    const throwT = Math.max(0, t - assemble)
+    const landed = build ? Math.min(throws, Math.floor((throwT + each * 0.15) / each)) : built ? throws : 0
+    const lift = built ? 1 : build ? stage(t, assemble + each * throws, assemble + each * throws + liftMs) : 0
+    const eased = lift * lift * (3 - 2 * lift)
+    const basketX = gx + 66
+    const basketTop = gy - 6
+    const hang = 6 + eased * 16
+    const out: Array<{ y: number; draw: (ctx: CanvasRenderingContext2D) => void }> = []
+    out.push({ y: gate.y * 16 + 14, draw: (ctx) => {
+      drawGate(ctx, gx, gy, eased)
+      const shake = build && throwT > 0 && throwT < each * throws && (throwT / each) % 1 > 0.85 ? Math.round(Math.sin(t / 20)) : 0
+      drawBasket(ctx, basketX, basketTop, hang + shake, landed)
+    } })
+    const progress = built ? 1 : build ? Math.min(1, t / assemble) : 0
+    if (progress > 0) {
+      out.push({ y: spot.y * 16 + 13, draw: (ctx) => {
+        let arm = 1
+        let loaded = false
+        if (build && t >= assemble && throwT < each * throws) {
+          // Each throw: the arm comes back down with a stone, holds, releases, and the stone flies.
+          const u = (throwT / each) % 1
+          if (u < 0.3) { arm = 1 - u / 0.3; loaded = u > 0.15 } else if (u < 0.42) { arm = 0; loaded = true } else arm = Math.min(1, (u - 0.42) / 0.06)
+          if (u >= 0.42 && u < 0.85) {
+            const k = (u - 0.42) / 0.43
+            const from = catapultBucket(cx, cy, 1)
+            const to = { x: basketX, y: basketTop + hang + 2 }
+            drawRock(ctx, from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k - Math.sin(k * Math.PI) * 26, 4)
+          }
+        } else if (build && t < assemble) arm = 0
+        drawCatapult(ctx, cx, cy, progress, arm, loaded)
+      } })
+    }
+    return out
+  }
+
 
   private flags(): ReadonlySet<string> {
     return new Set(this.hooks.getSave().flags)
@@ -203,7 +409,7 @@ export class WorldRuntime {
     if (thing) return { kind: 'thing' as const, thing, x: tx * 16 + 8, y: ty * 16 }
     const tile = tileAt(this.map, tx, ty)
     if (tile === 'C' && !flags.has(cutFlag(this.map.id, tx, ty))) return { kind: 'cardboard' as const, tx, ty, x: tx * 16 + 8, y: ty * 16 }
-    if (tile === 'b' && !flags.has(builtFlag(this.map.id))) return { kind: 'bridge' as const, x: tx * 16 + 8, y: ty * 16 }
+    if ((tile === 'b' || tile === 'h' || tile === 'g') && !flags.has(builtFlag(this.map.id))) return { kind: 'site' as const, x: tx * 16 + 8, y: ty * 16 }
     if (tile === '~' || tile === 'l') return { kind: 'tile' as const, tile, x: tx * 16 + 8, y: ty * 16 }
     return null
   }
@@ -222,7 +428,7 @@ export class WorldRuntime {
       case 'item': return this.hooks.onItem(found.item)
       case 'thing': return this.hooks.onThing(found.thing)
       case 'cardboard': return this.hooks.onCardboard(found.tx, found.ty)
-      case 'bridge': return this.hooks.onBridge()
+      case 'site': return this.hooks.onBuildSite()
       case 'tile':
         if (found.tile === '~') return this.hooks.onTalkTile('The water is calm. A Quotie splashes somewhere far away.')
         return this.hooks.onTalkTile('A laser beam! Don\'t touch it.')
@@ -313,16 +519,21 @@ export class WorldRuntime {
     const flags = this.flags()
     const want = this.input()
     this.moving = false
-    if (!want.strength) return
+    if (!want.strength) { this.pace = 0; return }
     // Face the stronger axis, with a little stickiness so diagonals don't flicker.
     const ax = Math.abs(want.x)
     const ay = Math.abs(want.y)
     const horizontal = this.facing === 'left' || this.facing === 'right'
     if (ax > ay * (horizontal ? 0.8 : 1.25)) this.facing = want.x > 0 ? 'right' : 'left'
     else if (ay > 0) this.facing = want.y > 0 ? 'down' : 'up'
-    const run = this.running || (want.strength > 0.92 && Math.hypot(this.stick.x, this.stick.y) > 0.18)
-    const speed = (run ? RUN : WALK) * Math.max(0.45, want.strength)
     const s = Math.min(dt, 50) / 1000
+    // The touch stick has a speed limit: a full push walks, and only the B button runs (a little
+    // slower than the keyboard run). It also eases in, so a quick flick doesn't launch the trainer.
+    const touch = Math.hypot(this.stick.x, this.stick.y) > 0.18
+    const run = this.running
+    const top = touch ? (run ? STICK_RUN : STICK_WALK) * Math.max(0.5, want.strength) : (run ? RUN : WALK)
+    this.pace = touch ? Math.min(top, this.pace + STICK_ACCEL * s) : top
+    const speed = this.pace
     const dx = want.x * speed * s
     const dy = want.y * speed * s
     // Ledges: walking down onto one hops over it.
@@ -463,6 +674,7 @@ export class WorldRuntime {
   update(dt: number) {
     this.time += dt
     this.frameDt = dt
+    this.updateBuild(dt)
     this.encounterCooldown = Math.max(0, this.encounterCooldown - dt)
     this.updateFade(dt)
     this.updateNpcs(dt)
@@ -666,6 +878,7 @@ export class WorldRuntime {
     if (outdoor) this.drawWater(ctx, x0, x1, y0, y1)
     else this.drawAnimatedTiles(ctx, x0, x1, y0, y1, flags)
     this.ambient.drawGround(ctx)
+    this.drawBuildGround(ctx)
 
     // Everything that stands, sorted by where its feet touch the ground.
     type Drawable = { y: number; draw: () => void }
@@ -729,6 +942,7 @@ export class WorldRuntime {
       shadows.push([pos.x + 8, pos.y + FEET + 1, 6])
       drawables.push({ y: pos.y + FEET, draw: () => this.drawNpc(ctx, npc, pos) })
     }
+    for (const item of this.catapultDrawables(flags)) drawables.push({ y: item.y, draw: () => item.draw(ctx) })
     for (const bird of this.ambient.groundBirds()) drawables.push({ y: bird.y, draw: () => bird.draw(ctx) })
     const lead2 = save.team.find((pyxie) => pyxie.hp > 0)
     const follow = this.followPoint()
